@@ -1461,6 +1461,137 @@ async function main() {
         assert.ok(Array.isArray(biRes.body.data.orgBreakdown));
       }
     );
+
+    await runTest(
+      "HTTP-Integration (Coaching Study Library, MCQ, Homework & Batch Listing)",
+      "Teacher uploads subject-wise PDF lecture sheet, student reads it in library, MCQ auto-grading, homework submission, and batch listing",
+      async () => {
+        const teacherToken = globalAppContainer.invitationAuth.issueSessionTokens({
+          id: "tch-dhaka-lib",
+          email: "physics@dhakamodel.edu.bd",
+          role: "teacher",
+          referenceId: "tch-lib-1",
+          tenantId: "dhakamodel",
+        }).accessToken;
+
+        const studentToken = globalAppContainer.invitationAuth.issueSessionTokens({
+          id: "stu-dhaka-lib",
+          email: "student@dhakamodel.edu.bd",
+          role: "student",
+          referenceId: "stu-lib-1",
+          tenantId: "dhakamodel",
+        }).accessToken;
+
+        const adminToken = globalAppContainer.invitationAuth.issueSessionTokens({
+          id: "adm-dhaka-lib",
+          email: "admin@dhakamodel.edu.bd",
+          role: "admin",
+          referenceId: "adm-lib-1",
+          tenantId: "dhakamodel",
+        }).accessToken;
+
+        // 1. Teacher uploads a subject-wise PDF lecture sheet
+        const pdfBase64 = Buffer.from("%PDF-1.7\nPhysics Chapter 3 Vector Lecture Sheet\n", "utf8").toString("base64");
+        const uploadMatRes = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/materials",
+          headers: { Authorization: `Bearer ${teacherToken}`, "x-tenant-id": "dhakamodel" },
+          body: {
+            title: "Vector & Kinematics Sheet 01",
+            subject: "Physics",
+            batchName: "HSC-26 Batch A",
+            originalName: "physics-vector-01.pdf",
+            mimeType: "application/pdf",
+            base64Content: pdfBase64,
+          },
+        });
+        assert.strictEqual(uploadMatRes.status, 201);
+        const matId = uploadMatRes.body.data.id;
+        assert.strictEqual(uploadMatRes.body.data.subject, "Physics");
+
+        // 2. Student lists & views the PDF in Study Library
+        const listMatRes = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/bd/materials?subject=Physics",
+          headers: { Authorization: `Bearer ${studentToken}`, "x-tenant-id": "dhakamodel" },
+        });
+        assert.strictEqual(listMatRes.status, 200);
+        assert.ok(listMatRes.body.data.some((m: any) => m.id === matId));
+
+        const viewPdfRes = await httpRequest(port, {
+          method: "GET",
+          path: `/api/v1/bd/materials/${matId}/view`,
+          headers: { Authorization: `Bearer ${studentToken}`, "x-tenant-id": "dhakamodel" },
+        });
+        assert.strictEqual(viewPdfRes.status, 200);
+
+        // 3. Teacher creates MCQ Quiz -> Student submits attempt -> auto-graded with negative marking
+        const createQuizRes = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/mcq",
+          headers: { Authorization: `Bearer ${teacherToken}`, "x-tenant-id": "dhakamodel" },
+          body: {
+            title: "Physics Quick MCQ",
+            subject: "Physics",
+            durationMinutes: 15,
+            negativeMarkPerWrong: 0.25,
+            questions: [
+              { questionId: "q1", questionText: "SI unit of Force?", options: ["Joule", "Newton", "Watt", "Pascal"], correctOptionIndex: 1, marks: 1 },
+              { questionId: "q2", questionText: "g on Earth?", options: ["9.8 m/s^2", "1.6", "3.7", "0"], correctOptionIndex: 0, marks: 1 },
+            ],
+          },
+        });
+        assert.strictEqual(createQuizRes.status, 201);
+        const quizId = createQuizRes.body.data.id;
+
+        const submitQuizRes = await httpRequest(port, {
+          method: "POST",
+          path: `/api/v1/bd/mcq/${quizId}/submit`,
+          headers: { Authorization: `Bearer ${studentToken}`, "x-tenant-id": "dhakamodel" },
+          body: {
+            answers: [
+              { questionId: "q1", selectedOptionIndex: 1 }, // correct (+1)
+              { questionId: "q2", selectedOptionIndex: 2 }, // wrong (-0.25)
+            ],
+          },
+        });
+        assert.strictEqual(submitQuizRes.status, 201);
+        assert.strictEqual(submitQuizRes.body.data.evaluation.netMarks, 0.75);
+
+        // 4. Teacher posts Assignment -> Student submits homework
+        const createHwRes = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/assignments",
+          headers: { Authorization: `Bearer ${teacherToken}`, "x-tenant-id": "dhakamodel" },
+          body: {
+            title: "Solve Vector Sheet Problems 1-10",
+            subject: "Physics",
+            dueDate: "2026-12-01",
+            maxMarks: 20,
+            description: "Show full derivation",
+          },
+        });
+        assert.strictEqual(createHwRes.status, 201);
+        const hwId = createHwRes.body.data.id;
+
+        const submitHwRes = await httpRequest(port, {
+          method: "POST",
+          path: `/api/v1/bd/assignments/${hwId}/submit`,
+          headers: { Authorization: `Bearer ${studentToken}`, "x-tenant-id": "dhakamodel" },
+          body: { submissionText: "Completed all 10 derivations." },
+        });
+        assert.strictEqual(submitHwRes.status, 201);
+
+        // 5. Admin lists Batches
+        const batchesRes = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/bd/batches",
+          headers: { Authorization: `Bearer ${adminToken}`, "x-tenant-id": "dhakamodel" },
+        });
+        assert.strictEqual(batchesRes.status, 200);
+        assert.ok(Array.isArray(batchesRes.body.data));
+      }
+    );
   } finally {
     server.close();
   }

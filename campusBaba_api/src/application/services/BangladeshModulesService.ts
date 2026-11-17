@@ -471,6 +471,303 @@ export class BangladeshModulesService {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // 6. Listing, Study Materials (Subject-Wise PDFs), MCQ Quizzes & Assignments
+  // ---------------------------------------------------------------------------
+  listBatches(tenantId: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const batches = this.deps.rlsStore.findMany<any>("coaching_batches");
+      const enrollments = this.deps.rlsStore.findMany<any>("batch_enrollments");
+      return batches.map((b) => {
+        const batchEnrollments = enrollments.filter((e) => e.batch_id === b.id);
+        return {
+          ...b,
+          activeCount: batchEnrollments.filter((e) => !e.is_waitlisted).length,
+          waitlistCount: batchEnrollments.filter((e) => e.is_waitlisted).length,
+          enrollments: batchEnrollments,
+        };
+      });
+    });
+  }
+
+  listLibraryBooks(tenantId: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.findMany<any>("library_books")
+    );
+  }
+
+  listLibraryLoans(tenantId: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.findMany<any>("library_loans")
+    );
+  }
+
+  listSmsLogs(tenantId: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore
+        .findMany<any>("sms_logs")
+        .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    );
+  }
+
+  listMfsPayments(tenantId: string, studentId?: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.findMany<any>(
+        "payments",
+        (p) => p.payment_method === "mfs_manual" && (!studentId || p.student_id === studentId)
+      )
+    );
+  }
+
+  attachStudyMaterialMetadata(
+    tenantId: string,
+    fileId: string,
+    meta: {
+      title: string;
+      subject: string;
+      batchName?: string;
+      courseName?: string;
+      description?: string;
+      uploadedByName?: string;
+    }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.updateById("files", fileId, {
+        title: meta.title,
+        subject: meta.subject,
+        batch_name: meta.batchName || "All Batches",
+        course_name: meta.courseName || "",
+        description: meta.description || "",
+        uploaded_by_name: meta.uploadedByName || "Teacher",
+      })
+    );
+  }
+
+  listStudyMaterials(
+    tenantId: string,
+    filters?: { subject?: string; batchName?: string; search?: string }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const items = this.deps.rlsStore.findMany<any>(
+        "files",
+        (f) => f.module === "lecture-sheets" && f.status === "ready"
+      );
+      const q = filters?.search?.trim().toLowerCase();
+      return items.filter((item) => {
+        if (filters?.subject && filters.subject !== "all" && item.subject !== filters.subject) {
+          return false;
+        }
+        if (
+          filters?.batchName &&
+          filters.batchName !== "all" &&
+          item.batch_name !== filters.batchName
+        ) {
+          return false;
+        }
+        if (q) {
+          const hay = `${item.title || ""} ${item.subject || ""} ${item.original_name || ""} ${item.description || ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    });
+  }
+
+  deleteStudyMaterial(tenantId: string, fileId: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.updateById("files", fileId, { status: "deleted" })
+    );
+  }
+
+  createMcqQuiz(
+    tenantId: string,
+    input: {
+      title: string;
+      subject: string;
+      batchName?: string;
+      durationMinutes?: number;
+      negativeMarkPerWrong?: number;
+      createdByName?: string;
+      questions: {
+        questionId?: string;
+        questionText: string;
+        options: string[];
+        correctOptionIndex: number;
+        marks?: number;
+      }[];
+    }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const normalizedQuestions = input.questions.map((q, idx) => ({
+        questionId: q.questionId || `q-${idx + 1}`,
+        questionText: q.questionText,
+        options: q.options,
+        correctOptionIndex: q.correctOptionIndex,
+        marks: q.marks ?? 1,
+      }));
+      return this.deps.rlsStore.insert("mcq_questions", {
+        record_type: "quiz",
+        title: input.title,
+        subject: input.subject,
+        batch_name: input.batchName || "All Batches",
+        duration_minutes: input.durationMinutes ?? 20,
+        negative_mark_per_wrong: input.negativeMarkPerWrong ?? 0.25,
+        created_by_name: input.createdByName || "Teacher",
+        questions: normalizedQuestions,
+      });
+    });
+  }
+
+  listMcqQuizzes(tenantId: string, includeCorrectAnswers: boolean) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const quizzes = this.deps.rlsStore.findMany<any>(
+        "mcq_questions",
+        (r) => r.record_type === "quiz"
+      );
+      if (includeCorrectAnswers) return quizzes;
+      return quizzes.map((qz) => ({
+        ...qz,
+        questions: (qz.questions || []).map((q: any) => ({
+          questionId: q.questionId,
+          questionText: q.questionText,
+          options: q.options,
+          marks: q.marks,
+        })),
+      }));
+    });
+  }
+
+  submitMcqQuizAttempt(
+    tenantId: string,
+    input: {
+      quizId: string;
+      studentId: string;
+      studentName: string;
+      answers: { questionId: string; selectedOptionIndex: number | null }[];
+    }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const quiz = this.deps.rlsStore.findById<any>("mcq_questions", input.quizId);
+      if (!quiz || quiz.record_type !== "quiz") {
+        throw new Error("MCQ quiz not found");
+      }
+      const answersMap: Record<string, number | null> = {};
+      for (const a of input.answers) {
+        answersMap[a.questionId] = a.selectedOptionIndex;
+      }
+      const evaluation = evaluateMcqSubmission({
+        questions: (quiz.questions || []).map((q: any) => ({
+          id: q.questionId,
+          correctOptionIndex: q.correctOptionIndex,
+          marks: q.marks ?? 1,
+        })),
+        answers: answersMap,
+        negativeMarkPerWrong: quiz.negative_mark_per_wrong ?? 0.25,
+      });
+      const maxPossibleMarks = (quiz.questions || []).reduce(
+        (sum: number, q: any) => sum + (Number(q.marks) || 1),
+        0
+      );
+      const fullEvaluation = { ...evaluation, maxPossibleMarks };
+      const submission = this.deps.rlsStore.insert("mcq_questions", {
+        record_type: "submission",
+        quiz_id: quiz.id,
+        quiz_title: quiz.title,
+        subject: quiz.subject,
+        student_id: input.studentId,
+        student_name: input.studentName,
+        answers: input.answers,
+        evaluation: fullEvaluation,
+      });
+      return { submission, evaluation: fullEvaluation };
+    });
+  }
+
+  listMcqSubmissions(tenantId: string, studentId?: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.findMany<any>(
+        "mcq_questions",
+        (r) => r.record_type === "submission" && (!studentId || r.student_id === studentId)
+      )
+    );
+  }
+
+  createAssignment(
+    tenantId: string,
+    input: {
+      title: string;
+      subject: string;
+      batchName?: string;
+      dueDate: string;
+      maxMarks?: number;
+      description: string;
+      teacherName?: string;
+    }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () =>
+      this.deps.rlsStore.insert("notices", {
+        record_type: "assignment",
+        title: input.title,
+        subject: input.subject,
+        batch_name: input.batchName || "All Batches",
+        due_date: input.dueDate,
+        max_marks: input.maxMarks ?? 20,
+        description: input.description,
+        teacher_name: input.teacherName || "Teacher",
+      })
+    );
+  }
+
+  listAssignments(tenantId: string, studentId?: string) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const assignments = this.deps.rlsStore.findMany<any>(
+        "notices",
+        (n) => n.record_type === "assignment"
+      );
+      const submissions = this.deps.rlsStore.findMany<any>(
+        "notices",
+        (n) => n.record_type === "assignment_submission"
+      );
+      return assignments.map((a) => {
+        const allSubs = submissions.filter((s) => s.assignment_id === a.id);
+        const mySub = studentId ? allSubs.find((s) => s.student_id === studentId) : null;
+        return {
+          ...a,
+          submissionCount: allSubs.length,
+          mySubmission: mySub || null,
+          submissions: studentId ? undefined : allSubs,
+        };
+      });
+    });
+  }
+
+  submitAssignment(
+    tenantId: string,
+    input: {
+      assignmentId: string;
+      studentId: string;
+      studentName: string;
+      submissionText: string;
+      attachmentUrl?: string;
+    }
+  ) {
+    return RlsTenantStore.runWithTenantContext({ tenantId }, () => {
+      const assignment = this.deps.rlsStore.findById<any>("notices", input.assignmentId);
+      if (!assignment || assignment.record_type !== "assignment") {
+        throw new Error("Assignment not found");
+      }
+      return this.deps.rlsStore.insert("notices", {
+        record_type: "assignment_submission",
+        assignment_id: assignment.id,
+        student_id: input.studentId,
+        student_name: input.studentName,
+        submission_text: input.submissionText,
+        attachment_url: input.attachmentUrl || "",
+        status: "submitted",
+      });
+    });
+  }
+
   // Expose pure domain helpers for controllers
   evaluateMcq(params: Parameters<typeof evaluateMcqSubmission>[0]) {
     return evaluateMcqSubmission(params);

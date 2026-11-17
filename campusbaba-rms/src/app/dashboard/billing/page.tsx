@@ -5,10 +5,8 @@ import {
   CreditCard,
   TrendingUp,
   DollarSign,
-  BarChart3,
   Layers,
   Users,
-  GraduationCap,
 } from "lucide-react";
 import {
   BarChart,
@@ -23,7 +21,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -35,12 +39,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
 import { ChartCard } from "@/components/chart-card";
 import { getDashboardStats, getPlans, upsertPlan } from "@/lib/api";
 
-const COLORS = ["#10b981", "#6366f1", "#06b6d4", "#8b5cf6", "#f59e0b"];
+const MONO_PALETTE = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 export default function BillingPage() {
   const [biStats, setBiStats] = useState<any>(null);
@@ -110,7 +121,7 @@ export default function BillingPage() {
     try {
       await upsertPlan(planForm);
       setPlanSavedMsg(
-        `Tier '${planForm.name}' (${planForm.code}) updated live: ৳${planForm.perStudentFeeBdt}/student (৳${planForm.orgStudentShareBdt} Org / ৳${planForm.platformStudentShareBdt} Ours) • Max Teachers: ${planForm.maxTeachers === -1 ? "∞" : planForm.maxTeachers} • Max Students: ${planForm.maxStudents === -1 ? "∞" : planForm.maxStudents}`
+        `Tier '${planForm.name}' (${planForm.code}) updated: ৳${planForm.perStudentFeeBdt}/student (৳${planForm.orgStudentShareBdt} Org / ৳${planForm.platformStudentShareBdt} Ours)`
       );
       fetchAll();
     } catch {
@@ -135,7 +146,6 @@ export default function BillingPage() {
         month,
         oursCampusBaba: stu * 10,
         orgShare: stu * 5,
-        grossVolume: stu * 15,
       };
     });
   })();
@@ -151,40 +161,36 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 mt-4">
+      <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] rounded-xl" />
+            <Skeleton key={i} className="h-[115px] rounded-md" />
           ))}
         </div>
-        <Skeleton className="h-[350px] rounded-xl" />
+        <Skeleton className="h-[350px] rounded-md" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 mt-2 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* ─── KPI Cards ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title="CampusBaba Net MRR (Ours)"
           value={platformMrrBdt}
           subtitle="৳10/student + Base Tier Fees"
           icon={DollarSign}
-          gradientFrom="from-emerald-500/20"
-          gradientTo="to-emerald-600/10"
-          accentColor="text-emerald-400"
+          tone="emerald"
           formatValue={(v) => `৳${v.toLocaleString()}`}
-          trend={{ value: 15, label: "vs last month", positive: true }}
+          trend={{ value: 15, label: "net", positive: true }}
         />
         <StatCard
           title="Annual Run Rate (ARR)"
           value={platformArrBdt}
           subtitle="12-month projected net"
           icon={TrendingUp}
-          gradientFrom="from-indigo-500/20"
-          gradientTo="to-violet-500/10"
-          accentColor="text-indigo-400"
+          tone="violet"
           formatValue={(v) => `৳${v.toLocaleString()}`}
         />
         <StatCard
@@ -192,9 +198,7 @@ export default function BillingPage() {
           value={orgShareBdt}
           subtitle={`Out of ৳${grossBdt.toLocaleString()} gross`}
           icon={CreditCard}
-          gradientFrom="from-cyan-500/20"
-          gradientTo="to-cyan-600/10"
-          accentColor="text-cyan-400"
+          tone="blue"
           formatValue={(v) => `৳${v.toLocaleString()}`}
         />
         <StatCard
@@ -202,62 +206,63 @@ export default function BillingPage() {
           value={0}
           subtitle={`${biStats?.totalGuardians ?? 0} Free Guardian Portals`}
           icon={Users}
-          gradientFrom="from-amber-500/20"
-          gradientTo="to-amber-600/10"
-          accentColor="text-amber-400"
+          tone="cyan"
           formatValue={() => "৳0 (FREE)"}
         />
       </div>
 
-      {/* ─── Dynamic Plan Tier & Per-Student Split Configurator ─── */}
-      <Card className="border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between">
+      {/* ─── Shadcn Tier & Split Configurator ─── */}
+      <Card className="border border-border bg-card shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
           <div>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+              <Layers className="h-4 w-4" />
               Subscription Tier & Per-Student Revenue Split Configurator
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Click any tier pill below (`Individual Tutor`, `SME Coaching`, `Campus Connect`) to customize its Max Students (`-1` = ∞), Max Guardians, Max Teachers, Max Classes, and Per-Student BDT Split (`৳15` = `৳5` Org + `৳10` Ours).
-            </p>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Select a tier preset below to edit Max Students (`-1` = ∞), Max
+              Guardians, Max Teachers, Max Classes, and Per-Student Split (`৳15`
+              = `৳5` Org + `৳10` Ours).
+            </CardDescription>
           </div>
-          <Button size="sm" onClick={handleSavePlan} disabled={savingPlan}>
+          <Button
+            size="sm"
+            className="h-8 text-xs"
+            onClick={handleSavePlan}
+            disabled={savingPlan}
+          >
             {savingPlan ? "Saving..." : "Save Tier Live"}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Tier Selector Pills */}
-          <div className="flex flex-wrap gap-2 pb-2 border-b border-border/40">
+        <CardContent className="pt-4 space-y-4">
+          <div className="flex flex-wrap gap-1.5 pb-3 border-b border-border/60">
             {plans.map((p) => (
-              <button
+              <Button
                 key={p.code}
                 type="button"
+                size="sm"
+                variant={planForm.code === p.code ? "default" : "outline"}
                 onClick={() => selectPlanPreset(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                  planForm.code === p.code
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary/30 hover:bg-secondary border-border/50"
-                }`}
+                className="h-8 text-xs font-mono"
               >
-                {p.name} ({p.maxTeachers === -1 ? "∞" : p.maxTeachers} TCH •{" "}
-                {p.maxStudents === -1 ? "∞" : p.maxStudents} STU • ৳
-                {p.perStudentFeeBdt ?? 15}/stu)
-              </button>
+                {p.name} ({p.maxTeachers === -1 ? "∞" : p.maxTeachers}T /{" "}
+                {p.maxStudents === -1 ? "∞" : p.maxStudents}S • ৳
+                {p.perStudentFeeBdt ?? 15})
+              </Button>
             ))}
           </div>
 
           {planSavedMsg && (
-            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+            <div className="p-2.5 rounded-md border border-border bg-secondary text-foreground text-xs font-mono">
               {planSavedMsg}
             </div>
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Tier Code
-              </label>
+              <Label className="text-xs text-muted-foreground">Tier Code</Label>
               <Input
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.code}
                 onChange={(e) =>
                   setPlanForm({ ...planForm, code: e.target.value })
@@ -265,10 +270,11 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Tier Display Name
-              </label>
+              <Label className="text-xs text-muted-foreground">
+                Display Name
+              </Label>
               <Input
+                className="mt-1 h-8 text-xs"
                 value={planForm.name}
                 onChange={(e) =>
                   setPlanForm({ ...planForm, name: e.target.value })
@@ -276,11 +282,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Per-Student Charge (৳)
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.perStudentFeeBdt}
                 onChange={(e) => {
                   const total = Number(e.target.value);
@@ -296,11 +303,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Org Share (৳)
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.orgStudentShareBdt}
                 onChange={(e) => {
                   const org = Number(e.target.value);
@@ -316,11 +324,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Ours / CampusBaba (৳)
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.platformStudentShareBdt}
                 onChange={(e) =>
                   setPlanForm({
@@ -334,11 +343,12 @@ export default function BillingPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Max Students (-1 = ∞)
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.maxStudents}
                 onChange={(e) =>
                   setPlanForm({
@@ -349,11 +359,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Max Guardians (-1 = ∞ Free)
-              </label>
+              <Label className="text-xs text-muted-foreground">
+                Max Guardians (-1 = ∞)
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.maxGuardians}
                 onChange={(e) =>
                   setPlanForm({
@@ -364,11 +375,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Max Teachers
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.maxTeachers}
                 onChange={(e) =>
                   setPlanForm({
@@ -379,11 +391,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Max Classes / Batches
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.maxClasses}
                 onChange={(e) =>
                   setPlanForm({
@@ -394,11 +407,12 @@ export default function BillingPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
+              <Label className="text-xs text-muted-foreground">
                 Base Monthly Fee (৳)
-              </label>
+              </Label>
               <Input
                 type="number"
+                className="mt-1 h-8 text-xs font-mono"
                 value={planForm.priceBdt}
                 onChange={(e) =>
                   setPlanForm({
@@ -412,56 +426,59 @@ export default function BillingPage() {
         </CardContent>
       </Card>
 
-      {/* ─── Charts ─── */}
+      {/* ─── Monochrome Charts ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard
           title="CampusBaba Share (৳10) vs Organization Share (৳5)"
           subtitle="Monthly per-student revenue split breakdown"
           className="lg:col-span-2"
         >
-          <div className="h-[280px] mt-2">
+          <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="var(--border)"
-                  opacity={0.3}
+                  vertical={false}
                 />
                 <XAxis
                   dataKey="month"
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip />
-                <Legend iconType="circle" iconSize={8} />
+                <Legend iconType="square" iconSize={8} />
                 <Bar
                   dataKey="oursCampusBaba"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
+                  fill="var(--chart-1)"
+                  radius={[3, 3, 0, 0]}
                   name="CampusBaba Share (৳10/stu)"
-                  maxBarSize={35}
+                  maxBarSize={32}
                 />
                 <Bar
                   dataKey="orgShare"
-                  fill="#6366f1"
-                  radius={[4, 4, 0, 0]}
+                  fill="var(--chart-3)"
+                  radius={[3, 3, 0, 0]}
                   name="Org Share (৳5/stu)"
-                  maxBarSize={35}
+                  maxBarSize={32}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
 
-        <ChartCard title="Plan Tier Distribution" subtitle="Active organizations by tier">
-          <div className="h-[280px] mt-2">
+        <ChartCard
+          title="Plan Tier Distribution"
+          subtitle="Active organizations by tier"
+        >
+          <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -472,11 +489,12 @@ export default function BillingPage() {
                   }
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={4}
+                  innerRadius={52}
+                  outerRadius={80}
+                  paddingAngle={3}
                   dataKey="value"
-                  strokeWidth={0}
+                  stroke="var(--background)"
+                  strokeWidth={2}
                 >
                   {(planData.length > 0
                     ? planData
@@ -484,12 +502,12 @@ export default function BillingPage() {
                   ).map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                      fill={MONO_PALETTE[index % MONO_PALETTE.length]}
                     />
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend iconType="circle" iconSize={8} />
+                <Legend iconType="square" iconSize={8} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -497,51 +515,60 @@ export default function BillingPage() {
       </div>
 
       {/* ─── Per-Organization Billing & Split Table ─── */}
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
+      <Card className="border border-border bg-card shadow-none">
+        <CardHeader className="border-b border-border/60 pb-4">
+          <CardTitle className="text-sm font-semibold tracking-tight">
             Organization Per-Student Billing & Split Ledger
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-border/50 text-xs">
-                <TableHead>Organization</TableHead>
+              <TableRow className="border-border/60 text-[11px] font-mono uppercase">
+                <TableHead className="pl-5">Organization</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Active Students</TableHead>
                 <TableHead>Free Guardians</TableHead>
                 <TableHead>Rate Split (Total / Org / Ours)</TableHead>
                 <TableHead>Gross Billed</TableHead>
                 <TableHead>Org Share</TableHead>
-                <TableHead>CampusBaba Net</TableHead>
+                <TableHead className="pr-5 text-right">
+                  CampusBaba Net
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {orgBreakdown.map((t) => (
-                <TableRow key={t.subdomain} className="border-border/30 text-xs">
-                  <TableCell className="font-medium">{t.name}</TableCell>
+                <TableRow
+                  key={t.subdomain}
+                  className="border-border/40 text-xs"
+                >
+                  <TableCell className="pl-5 font-medium">{t.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="uppercase text-[10px]">
+                    <Badge
+                      variant="outline"
+                      className="uppercase text-[10px] font-mono"
+                    >
                       {t.billingPlan.replace(/_/g, " ")}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono">
                     {t.students} / {t.maxStudents === -1 ? "∞" : t.maxStudents}
                   </TableCell>
-                  <TableCell className="font-mono text-cyan-400">
+                  <TableCell className="font-mono text-muted-foreground">
                     {t.guardians} (৳0 Free)
                   </TableCell>
                   <TableCell className="font-mono">
-                    ৳{t.perStudentFeeBdt} (৳{t.orgShareBdt} / ৳{t.platformShareBdt})
+                    ৳{t.perStudentFeeBdt} (৳{t.orgShareBdt} / ৳
+                    {t.platformShareBdt})
                   </TableCell>
                   <TableCell className="font-mono">
                     ৳{t.grossBdt.toLocaleString()}
                   </TableCell>
-                  <TableCell className="font-mono text-indigo-400">
+                  <TableCell className="font-mono text-muted-foreground">
                     ৳{t.orgEarnedBdt.toLocaleString()}
                   </TableCell>
-                  <TableCell className="font-mono font-bold text-emerald-400">
+                  <TableCell className="pr-5 text-right font-mono font-semibold text-foreground">
                     ৳{t.totalPlatformMrrBdt.toLocaleString()}
                   </TableCell>
                 </TableRow>

@@ -110,4 +110,100 @@ router.post(
   bdCtrl.allocateHostelRoomBed
 );
 
+// Coaching Batches Listing
+router.get(
+  "/batches",
+  requireFeatureFlag("coachingBatches"),
+  authorize(PERMISSIONS.BATCHES_READ),
+  bdCtrl.listBatches
+);
+
+// Subject-Wise PDF Lecture Sheets & Digital Study Library
+router.get(
+  "/materials",
+  authorize(PERMISSIONS.FILES_READ),
+  bdCtrl.listStudyMaterials
+);
+router.post(
+  "/materials",
+  authorize(PERMISSIONS.FILES_UPLOAD),
+  bdCtrl.uploadStudyMaterial
+);
+router.get(
+  "/materials/:id/view",
+  authorize(PERMISSIONS.FILES_READ),
+  bdCtrl.viewStudyMaterialPdf
+);
+router.delete(
+  "/materials/:id",
+  authorize(PERMISSIONS.FILES_UPLOAD),
+  bdCtrl.deleteStudyMaterial
+);
+
+// Library Listings
+router.get(
+  "/library/books",
+  requireFeatureFlag("library"),
+  authorize(PERMISSIONS.LIBRARY_READ),
+  bdCtrl.listLibraryBooks
+);
+router.get(
+  "/library/loans",
+  requireFeatureFlag("library"),
+  authorize(PERMISSIONS.LIBRARY_READ),
+  bdCtrl.listLibraryLoans
+);
+
+// SMS Logs & MFS Payment Listings
+router.get(
+  "/sms/logs",
+  requireFeatureFlag("sms"),
+  authorize(PERMISSIONS.SMS_SEND),
+  bdCtrl.listSmsLogs
+);
+router.get(
+  "/mfs-payments",
+  authorize(PERMISSIONS.PAYMENTS_READ),
+  bdCtrl.listMfsPayments
+);
+
+// Online MCQ Practice & Auto-Grading Quizzes
+router.get(
+  "/mcq",
+  authorize(PERMISSIONS.EXAMS_READ),
+  bdCtrl.listMcqQuizzes
+);
+router.post(
+  "/mcq",
+  authorize(PERMISSIONS.EXAMS_WRITE),
+  bdCtrl.createMcqQuiz
+);
+router.post(
+  "/mcq/:quizId/submit",
+  authorize(PERMISSIONS.EXAMS_READ),
+  bdCtrl.submitMcqQuizAttempt
+);
+router.get(
+  "/mcq/submissions",
+  authorize(PERMISSIONS.EXAMS_READ),
+  bdCtrl.listMcqSubmissions
+);
+
+// Homework & Assignments
+router.get(
+  "/assignments",
+  authorize(PERMISSIONS.ACADEMICS_READ),
+  bdCtrl.listAssignments
+);
+router.post(
+  "/assignments",
+  authorize(PERMISSIONS.EXAMS_WRITE),
+  bdCtrl.createAssignment
+);
+router.post(
+  "/assignments/:id/submit",
+  authorize(PERMISSIONS.ACADEMICS_READ),
+  bdCtrl.submitAssignment
+);
+
 export default router;

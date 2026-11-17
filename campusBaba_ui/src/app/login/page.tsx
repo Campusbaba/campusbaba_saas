@@ -159,25 +159,25 @@ export default function LoginPage() {
                                     {[
                                         {
                                             role: "Admin",
-                                            email: "admin@gmail.com",
+                                            email: "admin@demo.campusbaba.com",
                                             password: "password123",
                                             color: "text-blue-700",
                                         },
                                         {
                                             role: "Teacher",
-                                            email: "lavern_howe@yahoo.com",
+                                            email: "teacher@demo.campusbaba.com",
                                             password: "password123",
                                             color: "text-slate-700",
                                         },
                                         {
                                             role: "Parent",
-                                            email: "tiara_wunsch@hotmail.com",
+                                            email: "parent@demo.campusbaba.com",
                                             password: "password123",
                                             color: "text-slate-700",
                                         },
                                         {
                                             role: "Student",
-                                            email: "gabriella.harber@yahoo.com",
+                                            email: "student@demo.campusbaba.com",
                                             password: "password123",
                                             color: "text-slate-700",
                                         },

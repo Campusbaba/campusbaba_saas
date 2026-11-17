@@ -1,8 +1,9 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useAnimatedCounter } from "@/lib/hooks";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -14,6 +15,7 @@ interface StatCardProps {
     label: string;
     positive?: boolean;
   };
+  tone?: "emerald" | "blue" | "violet" | "amber" | "cyan" | "neutral";
   accentColor?: string;
   gradientFrom?: string;
   gradientTo?: string;
@@ -21,15 +23,25 @@ interface StatCardProps {
   formatValue?: (val: number) => string;
 }
 
+const TONE_STYLES: Record<string, string> = {
+  emerald:
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+  violet:
+    "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+  amber:
+    "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  cyan: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+  neutral: "bg-secondary text-foreground border-border",
+};
+
 export function StatCard({
   title,
   value,
   subtitle,
   icon: Icon,
   trend,
-  accentColor = "text-primary",
-  gradientFrom = "from-indigo-500/10",
-  gradientTo = "to-purple-500/10",
+  tone = "neutral",
   className = "",
   formatValue,
 }: StatCardProps) {
@@ -37,51 +49,50 @@ export function StatCard({
 
   return (
     <Card
-      className={`relative overflow-hidden border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 group ${className}`}
+      className={`border border-border bg-card shadow-xs hover:shadow-sm transition-shadow ${className}`}
     >
-      {/* Gradient accent bar */}
-      <div
-        className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${gradientFrom} ${gradientTo} opacity-60 group-hover:opacity-100 transition-opacity`}
-      />
-
-      {/* Background gradient glow */}
-      <div
-        className={`absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br ${gradientFrom} ${gradientTo} rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
-      />
-
-      <CardContent className="p-6 relative">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight animate-count-up">
-                {formatValue ? formatValue(animatedValue) : animatedValue.toLocaleString()}
-              </span>
-            </div>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
-            )}
-            {trend && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <span
-                  className={`text-xs font-semibold ${
-                    trend.positive ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {trend.positive ? "↑" : "↓"} {Math.abs(trend.value)}%
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {trend.label}
-                </span>
-              </div>
-            )}
-          </div>
-          <div
-            className={`p-3 rounded-xl bg-gradient-to-br ${gradientFrom} ${gradientTo} ${accentColor}`}
-          >
-            <Icon className="h-5 w-5" />
-          </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
+        <CardTitle className="text-xs font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        <div
+          className={`h-8 w-8 rounded-lg border flex items-center justify-center ${
+            TONE_STYLES[tone] || TONE_STYLES.neutral
+          }`}
+        >
+          <Icon className="h-4 w-4" />
         </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-5">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
+            {formatValue
+              ? formatValue(animatedValue)
+              : animatedValue.toLocaleString()}
+          </div>
+          {trend && (
+            <Badge
+              variant="outline"
+              className={`text-[11px] font-medium px-1.5 py-0 h-5 flex items-center gap-0.5 ${
+                trend.positive
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+              }`}
+            >
+              {trend.positive ? (
+                <ArrowUpRight className="h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3" />
+              )}
+              {Math.abs(trend.value)}%
+            </Badge>
+          )}
+        </div>
+        {subtitle && (
+          <p className="text-xs text-muted-foreground mt-1.5 truncate">
+            {subtitle}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

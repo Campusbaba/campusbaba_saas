@@ -319,3 +319,223 @@ export const allocateHostelRoomBed = asyncHandler(async (req: Request, res: Resp
     throw new AppError(400, err.message);
   }
 });
+
+// ---------------------------------------------------------------------------
+// 6. Listing, Subject-Wise PDF Study Materials, MCQ Quizzes & Assignments
+// ---------------------------------------------------------------------------
+export const listBatches = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const batches = container.bdModules.listBatches(tenantId);
+  res.json({ success: true, data: batches });
+});
+
+export const listLibraryBooks = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const books = container.bdModules.listLibraryBooks(tenantId);
+  res.json({ success: true, data: books });
+});
+
+export const listLibraryLoans = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const loans = container.bdModules.listLibraryLoans(tenantId);
+  res.json({ success: true, data: loans });
+});
+
+export const listSmsLogs = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const logs = container.bdModules.listSmsLogs(tenantId);
+  res.json({ success: true, data: logs });
+});
+
+export const listMfsPayments = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const studentId =
+    req.user?.role === "student" ? req.user.referenceId || req.user.id : (req.query.studentId as string | undefined);
+  const payments = container.bdModules.listMfsPayments(tenantId, studentId);
+  res.json({ success: true, data: payments });
+});
+
+export const listStudyMaterials = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { subject, batchName, search } = req.query as Record<string, string | undefined>;
+  const materials = container.bdModules.listStudyMaterials(tenantId, {
+    subject,
+    batchName,
+    search,
+  });
+  res.json({ success: true, data: materials });
+});
+
+export const uploadStudyMaterial = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const {
+    title,
+    subject,
+    batchName,
+    courseName,
+    description,
+    originalName,
+    mimeType,
+    base64Content,
+  } = req.body;
+
+  if (!title || !subject || !originalName || !base64Content) {
+    throw new AppError(400, "title, subject, originalName, and base64Content are required");
+  }
+
+  const buffer = Buffer.from(base64Content, "base64");
+  try {
+    const fileRecord = await container.fileStorage.uploadAndConfirmBuffer({
+      tenantId,
+      tenantQuotaMb: req.tenant?.storageLimitMb || 500,
+      module: "lecture-sheets",
+      entityType: "study_material",
+      entityId: subject.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "general",
+      originalName,
+      declaredMimeType: mimeType || "application/pdf",
+      buffer,
+      uploadedByUserId: req.user?.id || "system",
+      isSensitive: false,
+    });
+
+    const enriched = container.bdModules.attachStudyMaterialMetadata(tenantId, fileRecord.id, {
+      title,
+      subject,
+      batchName,
+      courseName,
+      description,
+      uploadedByName: req.user?.email || "Teacher",
+    });
+
+    res.status(201).json({ success: true, data: enriched });
+  } catch (err: any) {
+    throw new AppError(400, err.message || "Failed to upload study material");
+  }
+});
+
+export const viewStudyMaterialPdf = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { id } = req.params;
+  try {
+    const { buffer, file } = await container.fileStorage.getAuthorizedFileBuffer({
+      tenantId,
+      fileId: id,
+      actorUserId: req.user?.id || "system",
+    });
+    const download = req.query.download === "1";
+    res.setHeader("Content-Type", file.mime_type || "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `${download ? "attachment" : "inline"}; filename="${file.original_name}"`
+    );
+    res.send(buffer);
+  } catch (err: any) {
+    throw new AppError(404, err.message || "Study material file not found");
+  }
+});
+
+export const deleteStudyMaterial = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const updated = container.bdModules.deleteStudyMaterial(tenantId, req.params.id);
+  if (!updated) throw new AppError(404, "Study material not found");
+  res.json({ success: true, data: updated });
+});
+
+export const createMcqQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { title, subject, batchName, durationMinutes, negativeMarkPerWrong, questions } = req.body;
+  if (!title || !subject || !Array.isArray(questions) || questions.length === 0) {
+    throw new AppError(400, "title, subject, and at least one question are required");
+  }
+  const quiz = container.bdModules.createMcqQuiz(tenantId, {
+    title,
+    subject,
+    batchName,
+    durationMinutes: Number(durationMinutes) || 20,
+    negativeMarkPerWrong: negativeMarkPerWrong !== undefined ? Number(negativeMarkPerWrong) : 0.25,
+    createdByName: req.user?.email || "Teacher",
+    questions,
+  });
+  res.status(201).json({ success: true, data: quiz });
+});
+
+export const listMcqQuizzes = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const includeAnswers =
+    req.user?.role === "admin" || req.user?.role === "superadmin" || req.user?.role === "teacher";
+  const quizzes = container.bdModules.listMcqQuizzes(tenantId, includeAnswers);
+  res.json({ success: true, data: quizzes });
+});
+
+export const submitMcqQuizAttempt = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { answers } = req.body;
+  if (!Array.isArray(answers)) {
+    throw new AppError(400, "answers array is required");
+  }
+  try {
+    const result = container.bdModules.submitMcqQuizAttempt(tenantId, {
+      quizId: req.params.quizId,
+      studentId: req.user?.referenceId || req.user?.id || "student",
+      studentName: req.user?.email || "Student",
+      answers,
+    });
+    res.status(201).json({ success: true, data: result });
+  } catch (err: any) {
+    throw new AppError(400, err.message);
+  }
+});
+
+export const listMcqSubmissions = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const studentId =
+    req.user?.role === "student" ? req.user.referenceId || req.user.id : undefined;
+  const submissions = container.bdModules.listMcqSubmissions(tenantId, studentId);
+  res.json({ success: true, data: submissions });
+});
+
+export const createAssignment = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { title, subject, batchName, dueDate, maxMarks, description } = req.body;
+  if (!title || !subject || !dueDate || !description) {
+    throw new AppError(400, "title, subject, dueDate, and description are required");
+  }
+  const assignment = container.bdModules.createAssignment(tenantId, {
+    title,
+    subject,
+    batchName,
+    dueDate,
+    maxMarks: Number(maxMarks) || 20,
+    description,
+    teacherName: req.user?.email || "Teacher",
+  });
+  res.status(201).json({ success: true, data: assignment });
+});
+
+export const listAssignments = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const studentId =
+    req.user?.role === "student" ? req.user.referenceId || req.user.id : undefined;
+  const assignments = container.bdModules.listAssignments(tenantId, studentId);
+  res.json({ success: true, data: assignments });
+});
+
+export const submitAssignment = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.tenant?.subdomain || req.resolvedTenantSlug!;
+  const { submissionText, attachmentUrl } = req.body;
+  if (!submissionText) {
+    throw new AppError(400, "submissionText is required");
+  }
+  try {
+    const submission = container.bdModules.submitAssignment(tenantId, {
+      assignmentId: req.params.id,
+      studentId: req.user?.referenceId || req.user?.id || "student",
+      studentName: req.user?.email || "Student",
+      submissionText,
+      attachmentUrl,
+    });
+    res.status(201).json({ success: true, data: submission });
+  } catch (err: any) {
+    throw new AppError(400, err.message);
+  }
+});

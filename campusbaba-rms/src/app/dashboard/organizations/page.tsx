@@ -10,14 +10,20 @@ import {
   XCircle,
   AlertTriangle,
   ExternalLink,
-  Edit2,
   MoreHorizontal,
   Ban,
   Trash2,
   Power,
   Eye,
+  Plus,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -60,12 +66,16 @@ interface Tenant {
   _id: string;
   name: string;
   subdomain: string;
-  dbURI: string;
-  subscriptionStatus: "active" | "inactive" | "past_due";
+  subscriptionStatus: "active" | "inactive" | "past_due" | "suspended";
   billingPlan: string;
   maxStudents: number;
+  maxGuardians?: number;
   maxTeachers: number;
+  maxClasses?: number;
   maxAdmins: number;
+  perStudentFeeBdt?: number;
+  orgStudentShareBdt?: number;
+  platformStudentShareBdt?: number;
   createdAt: string;
 }
 
@@ -77,7 +87,6 @@ export default function OrganizationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
 
-  // Confirm dialog state
   const [confirmAction, setConfirmAction] = useState<{
     type: "suspend" | "activate" | "delete";
     tenant: Tenant;
@@ -89,7 +98,7 @@ export default function OrganizationsPage() {
   const fetchTenants = async () => {
     try {
       const result = await getOrganizations();
-      setTenants(result.data);
+      setTenants(result.data || []);
     } catch {
       toast.error("Failed to load organizations");
     } finally {
@@ -101,7 +110,6 @@ export default function OrganizationsPage() {
     fetchTenants();
   }, []);
 
-  // Filtering
   const filteredTenants = tenants.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -116,18 +124,16 @@ export default function OrganizationsPage() {
     return matchesSearch && matchesStatus && matchesPlan;
   });
 
-  // Stats
   const activeCount = tenants.filter(
     (t) => t.subscriptionStatus === "active"
   ).length;
   const inactiveCount = tenants.filter(
-    (t) => t.subscriptionStatus === "inactive"
+    (t) => t.subscriptionStatus !== "active"
   ).length;
   const pastDueCount = tenants.filter(
     (t) => t.subscriptionStatus === "past_due"
   ).length;
 
-  // Handle actions
   const handleAction = async () => {
     if (!confirmAction) return;
     setActionLoading(true);
@@ -160,103 +166,116 @@ export default function OrganizationsPage() {
     switch (status) {
       case "active":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">
-            <CheckCircle className="h-3 w-3 mr-1" />
+          <Badge
+            variant="outline"
+            className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+          >
             Active
           </Badge>
         );
       case "inactive":
+      case "suspended":
         return (
-          <Badge className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20">
-            <XCircle className="h-3 w-3 mr-1" />
-            Inactive
+          <Badge
+            variant="outline"
+            className="text-[10px] font-mono uppercase bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+          >
+            {status}
           </Badge>
         );
       case "past_due":
         return (
-          <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20">
-            <AlertTriangle className="h-3 w-3 mr-1" />
+          <Badge
+            variant="outline"
+            className="text-[10px] font-mono uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+          >
             Past Due
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return (
+          <Badge variant="outline" className="text-[10px] font-mono uppercase">
+            {status}
+          </Badge>
+        );
     }
   };
 
   if (loading) {
     return (
-      <div className="space-y-6 mt-4">
+      <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] rounded-xl" />
+            <Skeleton key={i} className="h-[115px] rounded-md" />
           ))}
         </div>
-        <Skeleton className="h-[400px] rounded-xl" />
+        <Skeleton className="h-[400px] rounded-md" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 mt-2 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* ─── Summary Stats ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title="Total Organizations"
           value={tenants.length}
+          subtitle="Provisioned tenants"
           icon={Building2}
-          gradientFrom="from-indigo-500/20"
-          gradientTo="to-indigo-600/10"
-          accentColor="text-indigo-400"
+          tone="blue"
         />
         <StatCard
-          title="Active"
+          title="Active Subscriptions"
           value={activeCount}
+          subtitle="Live in production"
           icon={CheckCircle}
-          gradientFrom="from-emerald-500/20"
-          gradientTo="to-emerald-600/10"
-          accentColor="text-emerald-400"
+          tone="emerald"
         />
         <StatCard
-          title="Inactive"
+          title="Suspended / Inactive"
           value={inactiveCount}
+          subtitle="Access paused"
           icon={XCircle}
-          gradientFrom="from-red-500/20"
-          gradientTo="to-red-600/10"
-          accentColor="text-red-400"
+          tone="violet"
         />
         <StatCard
           title="Past Due"
           value={pastDueCount}
+          subtitle="Billing follow-up"
           icon={AlertTriangle}
-          gradientFrom="from-amber-500/20"
-          gradientTo="to-amber-600/10"
-          accentColor="text-amber-400"
+          tone="amber"
         />
       </div>
 
-      {/* ─── Table Card ─── */}
-      <Card className="border-border/50">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <CardTitle className="text-base font-semibold">
-            All Organizations
-          </CardTitle>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* Search */}
+      {/* ─── Organizations Table Card ─── */}
+      <Card className="border border-border bg-card shadow-none">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+          <div>
+            <CardTitle className="text-sm font-semibold tracking-tight">
+              Organization Directory
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Manage tenant quotas, per-student splits, modules, and lifecycle.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
             <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search by name, subdomain, or ID..."
-                className="pl-9 w-full sm:w-72 h-9 bg-secondary/50"
+                placeholder="Search name, subdomain, ID..."
+                className="pl-8 w-full sm:w-64 h-8 text-xs bg-secondary/40"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            {/* Status filter */}
-            <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || "all")}>
-              <SelectTrigger className="w-[130px] h-9">
-                <Filter className="h-3.5 w-3.5 mr-1.5" />
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val || "all")}
+            >
+              <SelectTrigger className="w-[125px] h-8 text-xs font-mono">
+                <Filter className="h-3 w-3 mr-1.5" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -267,203 +286,206 @@ export default function OrganizationsPage() {
               </SelectContent>
             </Select>
 
-            {/* Plan filter */}
-            <Select value={planFilter} onValueChange={(val) => setPlanFilter(val || "all")}>
-              <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder="Plan" />
+            <Select
+              value={planFilter}
+              onValueChange={(val) => setPlanFilter(val || "all")}
+            >
+              <SelectTrigger className="w-[150px] h-8 text-xs font-mono">
+                <SelectValue placeholder="Tier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Plans</SelectItem>
+                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="individual_tutor">
+                  Individual Tutor
+                </SelectItem>
+                <SelectItem value="sme_coaching">SME Coaching</SelectItem>
+                <SelectItem value="campus_connect">Campus Connect</SelectItem>
                 <SelectItem value="postpaid">Postpaid</SelectItem>
-                <SelectItem value="prepaid">Prepaid</SelectItem>
                 <SelectItem value="enterprise">Enterprise</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* Provision button */}
             <Button
-              className="gradient-primary text-white hover:opacity-90 h-9"
+              size="sm"
+              className="h-8 text-xs"
               onClick={() => router.push("/dashboard/provision")}
             >
-              + Provision
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Provision
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0">
           {filteredTenants.length === 0 ? (
-            <EmptyState
-              icon={Building2}
-              title="No organizations found"
-              description={
-                searchQuery || statusFilter !== "all"
-                  ? "Try adjusting your filters or search query."
-                  : "Get started by provisioning your first organization."
-              }
-              actionLabel={
-                !searchQuery && statusFilter === "all"
-                  ? "Provision Organization"
-                  : undefined
-              }
-              onAction={
-                !searchQuery && statusFilter === "all"
-                  ? () => router.push("/dashboard/provision")
-                  : undefined
-              }
-            />
+            <div className="p-8">
+              <EmptyState
+                icon={Building2}
+                title="No organizations found"
+                description={
+                  searchQuery || statusFilter !== "all"
+                    ? "Try adjusting your filters or search query."
+                    : "Get started by provisioning your first organization."
+                }
+                actionLabel={
+                  !searchQuery && statusFilter === "all"
+                    ? "Provision Organization"
+                    : undefined
+                }
+                onAction={
+                  !searchQuery && statusFilter === "all"
+                    ? () => router.push("/dashboard/provision")
+                    : undefined
+                }
+              />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-[250px]">Organization</TableHead>
-                    <TableHead>Tenant ID</TableHead>
+                  <TableRow className="border-border/60 text-[11px] font-mono uppercase">
+                    <TableHead className="pl-5">Organization</TableHead>
                     <TableHead>Subdomain</TableHead>
-                    <TableHead className="text-center">Students</TableHead>
-                    <TableHead className="text-center">Teachers</TableHead>
-                    <TableHead className="text-center">Admins</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead className="text-center">Max Students</TableHead>
+                    <TableHead className="text-center">Max Guardians</TableHead>
+                    <TableHead className="text-center">Max Teachers</TableHead>
+                    <TableHead className="text-center">Split (৳)</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Registered</TableHead>
-                    <TableHead className="text-right w-[80px]">
-                      Actions
-                    </TableHead>
+                    <TableHead className="text-right pr-5">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTenants.map((tenant, i) => (
+                  {filteredTenants.map((tenant) => (
                     <TableRow
                       key={tenant._id}
-                      className="cursor-pointer hover:bg-secondary/30 border-border/30 transition-colors animate-slide-up group"
-                      style={{ animationDelay: `${i * 30}ms` }}
+                      className="cursor-pointer hover:bg-secondary/50 border-border/40 text-xs"
                       onClick={() =>
                         router.push(
-                          `/dashboard/organizations/${tenant._id}`
+                          `/dashboard/organizations/${tenant.subdomain || tenant._id}`
                         )
                       }
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm flex-shrink-0">
+                      <TableCell className="pl-5 font-medium">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 items-center justify-center rounded border border-border bg-secondary text-foreground font-mono text-xs font-bold shrink-0">
                             {tenant.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <p className="font-medium text-foreground">
                               {tenant.name}
                             </p>
+                            <p className="text-[10px] font-mono text-muted-foreground">
+                              ID: {tenant._id.slice(-8)}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <code className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded font-mono">
-                          {tenant._id.slice(-8)}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {tenant.subdomain}
-                          <span className="text-muted-foreground/50">
-                            .campusbaba.com
-                          </span>
+                      <TableCell className="font-mono text-xs">
+                        {tenant.subdomain}
+                        <span className="text-muted-foreground">
+                          .campusbaba.com
                         </span>
                       </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {tenant.maxStudents}
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-mono uppercase"
+                        >
+                          {tenant.billingPlan.replace(/_/g, " ")}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {tenant.maxTeachers}
+                      <TableCell className="text-center font-mono">
+                        {tenant.maxStudents === -1 ? "∞" : tenant.maxStudents}
                       </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {tenant.maxAdmins}
+                      <TableCell className="text-center font-mono">
+                        {(tenant.maxGuardians ?? -1) === -1
+                          ? "∞ (Free)"
+                          : tenant.maxGuardians}
+                      </TableCell>
+                      <TableCell className="text-center font-mono">
+                        {tenant.maxTeachers === -1 ? "∞" : tenant.maxTeachers}
+                      </TableCell>
+                      <TableCell className="text-center font-mono">
+                        ৳{tenant.perStudentFeeBdt ?? 15} (৳
+                        {tenant.orgStudentShareBdt ?? 5}/৳
+                        {tenant.platformStudentShareBdt ?? 10})
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(tenant.subscriptionStatus)}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {tenant.billingPlan}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(tenant.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell
+                        className="text-right pr-5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <DropdownMenu>
                           <DropdownMenuTrigger
-                            asChild
-                            onClick={(e) => e.stopPropagation()}
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                              />
+                            }
                           >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                            <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuContent align="end" className="w-44">
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() =>
                                 router.push(
-                                  `/dashboard/organizations/${tenant._id}`
-                                );
-                              }}
+                                  `/dashboard/organizations/${tenant.subdomain || tenant._id}`
+                                )
+                              }
                             >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
+                              <Eye className="h-3.5 w-3.5 mr-2" />
+                              Manage Quotas & RBAC
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() =>
                                 window.open(
                                   `https://${tenant.subdomain}.campusbaba.com`,
                                   "_blank"
-                                );
-                              }}
+                                )
+                              }
                             >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Visit Subdomain
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                              Open Subdomain
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {tenant.subscriptionStatus === "active" ? (
                               <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() =>
                                   setConfirmAction({
                                     type: "suspend",
                                     tenant,
-                                  });
-                                }}
-                                className="text-amber-400 focus:text-amber-400"
+                                  })
+                                }
                               >
-                                <Ban className="h-4 w-4 mr-2" />
-                                Suspend
+                                <Ban className="h-3.5 w-3.5 mr-2" />
+                                Suspend Tenant
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() =>
                                   setConfirmAction({
                                     type: "activate",
                                     tenant,
-                                  });
-                                }}
-                                className="text-emerald-400 focus:text-emerald-400"
+                                  })
+                                }
                               >
-                                <Power className="h-4 w-4 mr-2" />
-                                Activate
+                                <Power className="h-3.5 w-3.5 mr-2" />
+                                Activate Tenant
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConfirmAction({ type: "delete", tenant });
-                              }}
-                              className="text-red-400 focus:text-red-400"
+                              onClick={() =>
+                                setConfirmAction({ type: "delete", tenant })
+                              }
+                              className="text-destructive"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Purge Tenant
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -475,10 +497,9 @@ export default function OrganizationsPage() {
             </div>
           )}
 
-          {/* Results count */}
           {filteredTenants.length > 0 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-border/60">
+              <p className="text-[11px] font-mono text-muted-foreground">
                 Showing {filteredTenants.length} of {tenants.length}{" "}
                 organizations
               </p>
@@ -487,28 +508,27 @@ export default function OrganizationsPage() {
         </CardContent>
       </Card>
 
-      {/* ─── Confirm Dialog ─── */}
       {confirmAction && (
         <ConfirmDialog
           open={!!confirmAction}
           onOpenChange={() => setConfirmAction(null)}
           title={
             confirmAction.type === "delete"
-              ? `Delete ${confirmAction.tenant.name}?`
+              ? `Purge ${confirmAction.tenant.name}?`
               : confirmAction.type === "suspend"
               ? `Suspend ${confirmAction.tenant.name}?`
               : `Activate ${confirmAction.tenant.name}?`
           }
           description={
             confirmAction.type === "delete"
-              ? "This action is irreversible. All data associated with this organization will be permanently removed."
+              ? "Ensure the tenant is suspended and exported before verified purge."
               : confirmAction.type === "suspend"
-              ? "This will disable the organization's access. They won't be able to use the platform until reactivated."
-              : "This will restore the organization's access to the platform."
+              ? "This will pause access for this organization until reactivated."
+              : "This will restore active access for this organization."
           }
           confirmLabel={
             confirmAction.type === "delete"
-              ? "Delete"
+              ? "Purge"
               : confirmAction.type === "suspend"
               ? "Suspend"
               : "Activate"

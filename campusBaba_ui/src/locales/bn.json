@@ -100,7 +100,15 @@
       "myRoutines": "আমার রুটিন",
       "classRooms": "শ্রেণিকক্ষ",
       "examSchedule": "পরীক্ষার সময়সূচি",
-      "profitExpense": "লাভ / ব্যয়"
+      "profitExpense": "লাভ / ব্যয়",
+      "coachingBatches": "কোচিং ব্যাচ",
+      "studyLibrary": "স্টাডি লাইব্রেরি",
+      "lectureSheets": "লেকচার শিট",
+      "assignments": "হোমওয়ার্ক",
+      "mcqTests": "এমসিকিউ প্র্যাকটিস",
+      "mfsVerification": "বিকাশ/নগদ যাচাই",
+      "mfsPay": "বিকাশ / নগদ পেমেন্ট",
+      "smsGateway": "এসএমএস গেটওয়ে"
     }
   },
   "attendance": {

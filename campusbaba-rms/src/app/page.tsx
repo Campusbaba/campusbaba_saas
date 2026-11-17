@@ -2,15 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ArrowRight } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  Lock,
+  Mail,
+  ArrowRight,
+  Sun,
+  Moon,
+  Terminal,
+  Copy,
+  Check,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { loginSuperAdmin } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { theme, setTheme } = useTheme();
+  const [email, setEmail] = useState("admin@campusbaba.com");
+  const [password, setPassword] = useState("admin12345678");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,113 +44,184 @@ export default function LoginPage() {
 
     try {
       const result = await loginSuperAdmin(email, password);
-
       if (result.success) {
         localStorage.setItem("superadmin_token", result.token);
         router.push("/dashboard");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }
   };
 
+  const fillDemo = () => {
+    setEmail("admin@campusbaba.com");
+    setPassword("admin12345678");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Background gradient effects */}
-      <div className="absolute inset-0 bg-background" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/3 rounded-full blur-3xl" />
-
-      {/* Login Card */}
-      <div className="relative w-full max-w-md mx-4 animate-scale-in">
-        <div className="glass rounded-2xl p-8 shadow-2xl shadow-primary/5">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/25">
-                <span className="text-lg font-bold text-white">CB</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold gradient-text">CampusBaba</h1>
-                <p className="text-[10px] text-muted-foreground font-medium tracking-widest uppercase">
-                  Resource Management
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen w-full bg-background text-foreground flex flex-col justify-between p-6">
+      {/* Top Bar */}
+      <header className="flex items-center justify-between max-w-6xl w-full mx-auto">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-mono text-xs font-bold">
+            CB
           </div>
-
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Sign in to the Super Admin Portal
-            </p>
-          </div>
-
-          <form className="space-y-5" onSubmit={handleLogin}>
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm text-center animate-slide-up">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  required
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                  placeholder="admin@campusbaba.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="password"
-                  required
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-secondary/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 rounded-lg gradient-primary text-white font-medium text-sm transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+          <div>
+            <span className="text-sm font-semibold tracking-tight">
+              CampusBaba
+            </span>
+            <Badge
+              variant="outline"
+              className="ml-2 text-[10px] font-mono uppercase"
             >
-              {loading ? (
-                <span className="animate-pulse">Signing in...</span>
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            CampusBaba SaaS Platform &middot; Super Admin Access Only
-          </p>
+              RMS Control Plane
+            </Badge>
+          </div>
         </div>
-      </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="h-8 px-2.5 text-xs font-mono"
+        >
+          {theme === "dark" ? (
+            <>
+              <Sun className="h-3.5 w-3.5 mr-1.5" />
+              White Theme
+            </>
+          ) : (
+            <>
+              <Moon className="h-3.5 w-3.5 mr-1.5" />
+              Black Theme
+            </>
+          )}
+        </Button>
+      </header>
+
+      {/* Main Login Card */}
+      <main className="flex-1 flex items-center justify-center py-8">
+        <Card className="w-full max-w-[400px] border-border bg-card shadow-none">
+          <CardHeader className="space-y-1.5 pb-4">
+            <CardTitle className="text-xl font-semibold tracking-tight">
+              SuperAdmin Authentication
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Enter your root platform credentials to access the multi-tenant
+              governance & BI console.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="border border-destructive/40 bg-destructive/10 text-destructive px-3 py-2 rounded-md text-xs font-mono">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs">
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@campusbaba.com"
+                    className="pl-9 h-9 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="pl-9 h-9 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-9 text-xs font-medium"
+              >
+                {loading ? (
+                  "Authenticating..."
+                ) : (
+                  <>
+                    Sign In to Console
+                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <Separator />
+
+            {/* Dev Bootstrap Credential Helper */}
+            <div className="rounded-md border border-border bg-secondary/40 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium flex items-center gap-1.5 text-muted-foreground">
+                  <Terminal className="h-3 w-3" />
+                  Bootstrap Credentials
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={fillDemo}
+                  className="h-6 px-2 text-[10px] font-mono"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 mr-1" />
+                      Filled
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3 mr-1" />
+                      Auto-Fill
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="text-[11px] font-mono text-foreground space-y-0.5">
+                <div>ID: admin@campusbaba.com</div>
+                <div>PW: admin12345678</div>
+              </div>
+            </div>
+          </CardContent>
+
+          <CardFooter className="border-t border-border/60 pt-4 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>PostgreSQL 16 + RLS</span>
+            <span className="font-mono">v2.0 Monochrome</span>
+          </CardFooter>
+        </Card>
+      </main>
+
+      <footer className="text-center text-[11px] text-muted-foreground font-mono">
+        CampusBaba SaaS Infrastructure &middot; Zero-Code Governance Plane
+      </footer>
     </div>
   );
 }

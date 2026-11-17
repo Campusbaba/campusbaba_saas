@@ -300,4 +300,27 @@ export class FileStorageService {
 
     return { downloadUrl, file };
   }
+
+  /**
+   * Streams/reads file bytes from StoragePort after verifying tenant RLS and readiness.
+   */
+  async getAuthorizedFileBuffer(input: {
+    tenantId: string;
+    fileId: string;
+    actorUserId: string;
+  }): Promise<{ buffer: Buffer; file: FileMetadataRecord }> {
+    const file = RlsTenantStore.runWithTenantContext(
+      { tenantId: input.tenantId, actorUserId: input.actorUserId },
+      () => this.deps.rlsStore.findById<FileMetadataRecord>("files", input.fileId)
+    );
+
+    if (!file || file.status !== "ready") {
+      throw new Error("File not found or not ready for viewing");
+    }
+
+    const buffer = await this.deps.storage.getObjectBuffer(file.object_key, {
+      tenantId: input.tenantId,
+    });
+    return { buffer, file };
+  }
 }

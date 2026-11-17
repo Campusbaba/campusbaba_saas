@@ -1,5 +1,5 @@
 "use client";
-import { LayoutDashboard, Users, CreditCard, CalendarCheck, Clock, FilePen, ClipboardCheck, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, CalendarCheck, Clock, FilePen, ClipboardCheck, BookOpen, Library } from "lucide-react";
 import { AppSidebar } from "./Sidebar";
 
 export function ParentSidebar() {
@@ -16,6 +16,7 @@ export function ParentSidebar() {
                     items: [
                         { labelKey: "sidebar.items.myRoutines", href: "/parent/routines", icon: Clock },
                         { labelKey: "common.pages.attendance", href: "/parent/attendance", icon: CalendarCheck },
+                        { labelKey: "sidebar.items.studyLibrary", href: "/parent/library", icon: Library },
                     ],
                 },
                 {

@@ -4,13 +4,16 @@ import {
     LayoutDashboard, Users, GraduationCap, Briefcase, UserCheck,
     BookOpen, Building2, DoorOpen, CalendarCheck, Clock, FilePen,
     CreditCard, Wallet, Bell, BarChart3, TrendingDown, DollarSign, TrendingUp, ClipboardCheck,
-    ShieldCheck,
+    ShieldCheck, Layers, Library, MessageSquare, Smartphone,
 } from "lucide-react";
 import { useGovernance } from "@/hooks/useGovernance";
 
 export function AdminSidebar() {
     const { config } = useGovernance();
     const onlinePaymentsEnabled = config?.featureFlags?.onlinePayments ?? true;
+    const batchesEnabled = config?.featureFlags?.coachingBatches ?? true;
+    const libraryEnabled = config?.featureFlags?.library ?? true;
+    const smsEnabled = config?.featureFlags?.sms ?? true;
 
     const navItems: NavItemOrGroup[] = [
         { labelKey: "common.pages.dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -30,6 +33,12 @@ export function AdminSidebar() {
             items: [
                 { labelKey: "common.pages.departments", href: "/admin/departments", icon: Building2 },
                 { labelKey: "common.pages.courses", href: "/admin/courses", icon: BookOpen },
+                ...(batchesEnabled
+                    ? [{ labelKey: "sidebar.items.coachingBatches", href: "/admin/batches", icon: Layers }]
+                    : []),
+                ...(libraryEnabled
+                    ? [{ labelKey: "sidebar.items.studyLibrary", href: "/admin/library", icon: Library }]
+                    : []),
                 { labelKey: "sidebar.items.classRooms", href: "/admin/classrooms", icon: DoorOpen },
                 { labelKey: "common.pages.attendance", href: "/admin/attendance", icon: CalendarCheck },
                 { labelKey: "common.pages.routines", href: "/admin/routines", icon: Clock },
@@ -50,6 +59,7 @@ export function AdminSidebar() {
                       icon: CreditCard,
                       items: [
                           { labelKey: "common.pages.payments", href: "/admin/payments", icon: CreditCard },
+                          { labelKey: "sidebar.items.mfsVerification", href: "/admin/mfs-payments", icon: Smartphone },
                       ],
                   },
               ]
@@ -66,6 +76,9 @@ export function AdminSidebar() {
             icon: Bell,
             items: [
                 { labelKey: "common.pages.notices", href: "/admin/notices", icon: Bell },
+                ...(smsEnabled
+                    ? [{ labelKey: "sidebar.items.smsGateway", href: "/admin/sms", icon: MessageSquare }]
+                    : []),
             ],
         },
         {

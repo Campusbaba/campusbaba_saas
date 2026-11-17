@@ -3,27 +3,31 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import {
-  User,
   Shield,
   Palette,
-  Globe,
   Save,
-  Lock,
   Moon,
   Sun,
   KeyRound,
   Cpu,
   CheckCircle2,
   RefreshCw,
+  Check,
+  X,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   getPlatformGovernance,
@@ -33,59 +37,71 @@ import {
 import { toast } from "sonner";
 
 const FALLBACK_PERMISSIONS = [
-  { code: "users:invite", module: "users" },
-  { code: "users:manage", module: "users" },
-  { code: "students:read", module: "students" },
-  { code: "students:write", module: "students" },
-  { code: "students:delete", module: "students" },
-  { code: "teachers:read", module: "teachers" },
-  { code: "teachers:write", module: "teachers" },
-  { code: "teachers:delete", module: "teachers" },
-  { code: "employees:read", module: "employees" },
-  { code: "employees:write", module: "employees" },
-  { code: "employees:delete", module: "employees" },
-  { code: "parents:read", module: "parents" },
-  { code: "parents:write", module: "parents" },
-  { code: "parents:delete", module: "parents" },
-  { code: "academics:read", module: "academics" },
-  { code: "academics:write", module: "academics" },
-  { code: "attendance:read", module: "attendance" },
-  { code: "attendance:mark", module: "attendance" },
-  { code: "batches:read", module: "batches" },
-  { code: "batches:write", module: "batches" },
-  { code: "exams:read", module: "exams" },
-  { code: "exams:write", module: "exams" },
-  { code: "marks:read", module: "marks" },
-  { code: "marks:evaluate", module: "marks" },
-  { code: "marks:publish", module: "marks" },
-  { code: "payments:read", module: "payments" },
-  { code: "payments:write", module: "payments" },
-  { code: "payments:verify_trx", module: "payments" },
-  { code: "expenses:read", module: "expenses" },
-  { code: "expenses:write", module: "expenses" },
-  { code: "expenses:approve", module: "expenses" },
-  { code: "reports:financial:read", module: "reports" },
-  { code: "notices:read", module: "notices" },
-  { code: "notices:write", module: "notices" },
-  { code: "sms:send", module: "sms" },
-  { code: "library:read", module: "library" },
-  { code: "library:write", module: "library" },
-  { code: "transport:read", module: "transport" },
-  { code: "transport:write", module: "transport" },
-  { code: "hostel:read", module: "hostel" },
-  { code: "hostel:write", module: "hostel" },
-  { code: "files:upload", module: "files" },
-  { code: "files:read", module: "files" },
-  { code: "files:sensitive:read", module: "files" },
+  { code: "users:invite", module: "Users & Onboarding", label: "Issue Signed QR Invitations" },
+  { code: "users:manage", module: "Users & Onboarding", label: "Manage User Accounts" },
+  { code: "students:read", module: "Users & Onboarding", label: "View Students" },
+  { code: "students:write", module: "Users & Onboarding", label: "Create & Edit Students" },
+  { code: "students:delete", module: "Users & Onboarding", label: "Delete Students" },
+  { code: "teachers:read", module: "Users & Onboarding", label: "View Teachers" },
+  { code: "teachers:write", module: "Users & Onboarding", label: "Create & Edit Teachers" },
+  { code: "teachers:delete", module: "Users & Onboarding", label: "Delete Teachers" },
+  { code: "employees:read", module: "Users & Onboarding", label: "View Staff / Employees" },
+  { code: "employees:write", module: "Users & Onboarding", label: "Create & Edit Staff" },
+  { code: "employees:delete", module: "Users & Onboarding", label: "Delete Staff" },
+  { code: "parents:read", module: "Users & Onboarding", label: "View Guardians" },
+  { code: "parents:write", module: "Users & Onboarding", label: "Create & Edit Guardians" },
+  { code: "parents:delete", module: "Users & Onboarding", label: "Delete Guardians" },
+  { code: "academics:read", module: "Academics & Batches", label: "View Classes & Courses" },
+  { code: "academics:write", module: "Academics & Batches", label: "Manage Classes & Routines" },
+  { code: "attendance:read", module: "Academics & Batches", label: "View Attendance Records" },
+  { code: "attendance:mark", module: "Academics & Batches", label: "Mark Daily Attendance" },
+  { code: "batches:read", module: "Academics & Batches", label: "View Coaching Batches" },
+  { code: "batches:write", module: "Academics & Batches", label: "Manage Coaching Batches" },
+  { code: "exams:read", module: "Exams & 5.00 GPA", label: "View Exam Schedules" },
+  { code: "exams:write", module: "Exams & 5.00 GPA", label: "Create & Edit Exams" },
+  { code: "marks:read", module: "Exams & 5.00 GPA", label: "View Subject Marks & Merit" },
+  { code: "marks:evaluate", module: "Exams & 5.00 GPA", label: "Enter & Evaluate Marks" },
+  { code: "marks:publish", module: "Exams & 5.00 GPA", label: "Publish Term GPA Results" },
+  { code: "payments:read", module: "Finance & Billing", label: "View Fee Invoices" },
+  { code: "payments:write", module: "Finance & Billing", label: "Collect Cash / Record Fees" },
+  { code: "payments:verify_trx", module: "Finance & Billing", label: "Verify bKash/Nagad TrxID" },
+  { code: "expenses:read", module: "Finance & Billing", label: "View Campus Expenses" },
+  { code: "expenses:write", module: "Finance & Billing", label: "Record Expenses" },
+  { code: "expenses:approve", module: "Finance & Billing", label: "Approve Expense Vouchers" },
+  { code: "reports:financial:read", module: "Finance & Billing", label: "View Profit & Income BI" },
+  { code: "notices:read", module: "Campus Operations", label: "Read Notices" },
+  { code: "notices:write", module: "Campus Operations", label: "Publish Notices" },
+  { code: "sms:send", module: "Campus Operations", label: "Send BTRC Masking SMS" },
+  { code: "library:read", module: "Campus Operations", label: "View Library Catalog" },
+  { code: "library:write", module: "Campus Operations", label: "Issue & Return Books" },
+  { code: "transport:read", module: "Campus Operations", label: "View Transport Routes" },
+  { code: "transport:write", module: "Campus Operations", label: "Manage Fleet & Routes" },
+  { code: "hostel:read", module: "Campus Operations", label: "View Hostel Rooms" },
+  { code: "hostel:write", module: "Campus Operations", label: "Manage Rooms & Mess" },
+  { code: "files:upload", module: "Storage & R2", label: "Upload Documents & Photos" },
+  { code: "files:read", module: "Storage & R2", label: "Download General Files" },
+  { code: "files:sensitive:read", module: "Storage & R2", label: "Access Sensitive NID/Birth Certs" },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Institution Admin",
+  employee: "Staff / Employee",
+  teacher: "Teacher",
+  student: "Student",
+  parent: "Parent / Guardian",
+  accountant: "Accountant",
+  librarian: "Librarian",
+};
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<
+    "rbac" | "security" | "drivers" | "appearance"
+  >("rbac");
   const [loading, setLoading] = useState(true);
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [savingRbac, setSavingRbac] = useState(false);
 
-  // Centralized Platform Security & Operational Policy
   const [policy, setPolicy] = useState({
     enforceHostOnlyResolution: false,
     maintenanceMode: false,
@@ -101,10 +117,15 @@ export default function SettingsPage() {
     enforceBtrcPromotionalWindow: true,
     defaultSmsSenderId: "CAMPUSBABA",
     autoActivateStudentOnPayment: true,
-    enabledPaymentGateways: ["manual", "bkash", "nagad", "sslcommerz", "aamarpay"],
+    enabledPaymentGateways: [
+      "manual",
+      "bkash",
+      "nagad",
+      "sslcommerz",
+      "aamarpay",
+    ],
   });
 
-  // Dynamic RBAC Matrix
   const [selectedRole, setSelectedRole] = useState<string>("employee");
   const [propagateToAll, setPropagateToAll] = useState<boolean>(true);
   const [roleMatrix, setRoleMatrix] = useState<Record<string, string[]>>({
@@ -160,7 +181,7 @@ export default function SettingsPage() {
     ],
     librarian: ["students:read", "library:read", "library:write"],
   });
-  const [permissionCatalog, setPermissionCatalog] = useState(FALLBACK_PERMISSIONS);
+
   const [activeDrivers, setActiveDrivers] = useState<Record<string, any>>({
     storage: "local",
     sms: "console",
@@ -187,13 +208,10 @@ export default function SettingsPage() {
           });
         }
         if (res.data.roleMatrix) setRoleMatrix(res.data.roleMatrix);
-        if (res.data.permissionCatalog?.length) {
-          setPermissionCatalog(res.data.permissionCatalog);
-        }
         if (res.data.activeDrivers) setActiveDrivers(res.data.activeDrivers);
       }
     } catch {
-      // Fallback to local state if backend is offline
+      // Fallback to local defaults
     } finally {
       setLoading(false);
     }
@@ -217,7 +235,9 @@ export default function SettingsPage() {
           .map((s) => s.trim().toLowerCase())
           .filter(Boolean),
       });
-      toast.success("Platform security & operational policies applied immediately!");
+      toast.success(
+        "Platform security & operational policies applied immediately!"
+      );
     } catch {
       toast.error("Failed to update platform security policy");
     } finally {
@@ -233,6 +253,20 @@ export default function SettingsPage() {
     setRoleMatrix({ ...roleMatrix, [selectedRole]: updated });
   };
 
+  const selectAllForRole = () => {
+    setRoleMatrix({
+      ...roleMatrix,
+      [selectedRole]: FALLBACK_PERMISSIONS.map((p) => p.code),
+    });
+  };
+
+  const clearAllForRole = () => {
+    setRoleMatrix({
+      ...roleMatrix,
+      [selectedRole]: [],
+    });
+  };
+
   const handleSaveRbac = async () => {
     setSavingRbac(true);
     try {
@@ -242,7 +276,9 @@ export default function SettingsPage() {
         propagateToAllTenants: propagateToAll,
       });
       toast.success(
-        `RBAC permissions saved for '${selectedRole}'${propagateToAll ? " and propagated to all organizations" : ""}!`
+        `RBAC permissions saved for '${selectedRole}'${
+          propagateToAll ? " and propagated to all organizations" : ""
+        }!`
       );
     } catch {
       toast.error("Failed to save RBAC permissions");
@@ -259,501 +295,629 @@ export default function SettingsPage() {
     setPolicy({ ...policy, enabledPaymentGateways: updated });
   };
 
+  // Group permissions by module for clean visual sections
+  const groupedPermissions = FALLBACK_PERMISSIONS.reduce(
+    (acc, perm) => {
+      if (!acc[perm.module]) acc[perm.module] = [];
+      acc[perm.module].push(perm);
+      return acc;
+    },
+    {} as Record<string, typeof FALLBACK_PERMISSIONS>
+  );
+
   return (
-    <div className="space-y-6 mt-2 animate-fade-in max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Centralized Zero-Code Control Plane — Manage RBAC permissions, security policies, rate limits, storage quotas, and payment/SMS gateways across the entire platform.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={fetchGovernance} disabled={loading}>
-          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-          Sync Live State
-        </Button>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* ─── Control Plane Header & Clean Tab Bar ─── */}
+      <Card className="border border-border bg-card shadow-xs">
+        <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold tracking-tight">
+                Zero-Code Platform Governance & Security Control Plane
+              </h2>
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+              >
+                LIVE ENFORCEMENT
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Manage role permissions, tenant resolution, rate limits, R2
+              storage quotas, and BTRC SMS rules from one place without touching
+              code.
+            </p>
+          </div>
 
-      <Tabs defaultValue="rbac" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="rbac" className="text-xs">
-            <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-            RBAC Permission Matrix
-          </TabsTrigger>
-          <TabsTrigger value="security" className="text-xs">
-            <Shield className="h-3.5 w-3.5 mr-1.5" />
-            Security, CORS & Rate Limits
-          </TabsTrigger>
-          <TabsTrigger value="drivers" className="text-xs">
-            <Cpu className="h-3.5 w-3.5 mr-1.5" />
-            R2 Storage, SMS & Gateways
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="text-xs">
-            <Palette className="h-3.5 w-3.5 mr-1.5" />
-            Theme & Appearance
-          </TabsTrigger>
-        </TabsList>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button
+              size="sm"
+              variant={activeTab === "rbac" ? "default" : "outline"}
+              onClick={() => setActiveTab("rbac")}
+              className="h-8 text-xs"
+            >
+              <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+              RBAC Matrix
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === "security" ? "default" : "outline"}
+              onClick={() => setActiveTab("security")}
+              className="h-8 text-xs"
+            >
+              <Shield className="h-3.5 w-3.5 mr-1.5" />
+              Security & Rate Limits
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === "drivers" ? "default" : "outline"}
+              onClick={() => setActiveTab("drivers")}
+              className="h-8 text-xs"
+            >
+              <Cpu className="h-3.5 w-3.5 mr-1.5" />
+              R2, SMS & Gateways
+            </Button>
+            <Button
+              size="sm"
+              variant={activeTab === "appearance" ? "default" : "outline"}
+              onClick={() => setActiveTab("appearance")}
+              className="h-8 text-xs"
+            >
+              <Palette className="h-3.5 w-3.5 mr-1.5" />
+              Appearance
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={fetchGovernance}
+              disabled={loading}
+              className="h-8 w-8"
+              title="Sync Live State"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* ─── TAB 1: Global RBAC Permission Matrix ─── */}
-        <TabsContent value="rbac">
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-primary" />
-                  Dynamic Role-Based Access Control (RBAC) Matrix
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Toggle exact API & UI permissions per role. Changes take effect immediately without touching code.
-                </p>
+      {/* ─── TAB 1: Global RBAC Permission Matrix ─── */}
+      {activeTab === "rbac" && (
+        <Card className="border border-border bg-card shadow-xs">
+          <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-4">
+            <div>
+              <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                Dynamic Role-Based Access Control (RBAC) Matrix
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Select a role below and grant or revoke permissions. Every API
+                route enforces this matrix immediately.
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                onClick={() => setPropagateToAll(!propagateToAll)}
+                className="flex items-center gap-2 text-xs cursor-pointer px-2.5 py-1.5 rounded-md border border-border bg-secondary/40"
+              >
+                <Checkbox checked={propagateToAll} />
+                <span>Propagate to all organizations</span>
               </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <Checkbox
-                    checked={propagateToAll}
-                    onCheckedChange={(v) => setPropagateToAll(!!v)}
-                  />
-                  <span>Apply to all active organizations</span>
-                </label>
+
+              <Button
+                onClick={handleSaveRbac}
+                disabled={savingRbac}
+                size="sm"
+                className="h-8 text-xs"
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {savingRbac
+                  ? "Saving..."
+                  : `Save ${ROLE_LABELS[selectedRole] || selectedRole}`}
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-5 space-y-6">
+            {/* Role Selector Bar + Quick Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
+              <div className="flex flex-wrap gap-1.5">
+                {Object.keys(roleMatrix).map((role) => {
+                  const isSelected = selectedRole === role;
+                  const count = (roleMatrix[role] || []).length;
+                  return (
+                    <Button
+                      key={role}
+                      type="button"
+                      size="sm"
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => setSelectedRole(role)}
+                      className="h-8 text-xs"
+                    >
+                      <span>{ROLE_LABELS[role] || role}</span>
+                      <Badge
+                        variant={isSelected ? "secondary" : "outline"}
+                        className="ml-2 text-[10px] font-mono px-1.5 py-0"
+                      >
+                        {count}
+                      </Badge>
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-1.5">
                 <Button
-                  onClick={handleSaveRbac}
-                  disabled={savingRbac}
-                  className="gradient-primary text-white"
+                  type="button"
+                  variant="outline"
                   size="sm"
+                  onClick={selectAllForRole}
+                  className="h-7 text-[11px] font-mono"
                 >
-                  <Save className="h-3.5 w-3.5 mr-1.5" />
-                  {savingRbac ? "Saving..." : `Save '${selectedRole.toUpperCase()}' Permissions`}
+                  <Check className="h-3 w-3 mr-1" />
+                  Grant All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllForRole}
+                  className="h-7 text-[11px] font-mono"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Revoke All
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Role Selector Pills */}
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(roleMatrix).map((role) => (
-                  <Button
-                    key={role}
-                    type="button"
-                    size="sm"
-                    variant={selectedRole === role ? "default" : "outline"}
-                    onClick={() => setSelectedRole(role)}
-                    className={
-                      selectedRole === role
-                        ? "gradient-primary text-white capitalize"
-                        : "capitalize"
-                    }
-                  >
-                    {role}
-                    <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {(roleMatrix[role] || []).length}
-                    </Badge>
-                  </Button>
-                ))}
-              </div>
+            </div>
 
-              <Separator />
+            {/* Grouped Permission Cards by Module */}
+            <div className="space-y-6">
+              {Object.entries(groupedPermissions).map(([moduleName, perms]) => (
+                <div key={moduleName} className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+                      {moduleName}
+                    </h3>
+                    <span className="text-[11px] font-mono text-muted-foreground">
+                      {
+                        perms.filter((p) =>
+                          (roleMatrix[selectedRole] || []).includes(p.code)
+                        ).length
+                      }{" "}
+                      / {perms.length} active
+                    </span>
+                  </div>
 
-              {/* Permission Checkboxes Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {permissionCatalog
-                  .filter((p) => !p.code.startsWith("platform:"))
-                  .map((perm) => {
-                    const checked = (roleMatrix[selectedRole] || []).includes(
-                      perm.code
-                    );
-                    return (
-                      <label
-                        key={perm.code}
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-                          checked
-                            ? "border-primary/50 bg-primary/5"
-                            : "border-border/50 hover:border-border"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() =>
-                              toggleRolePermission(perm.code)
-                            }
-                          />
-                          <div>
-                            <p className="text-xs font-mono font-medium">
-                              {perm.code}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground uppercase">
-                              Module: {perm.module}
-                            </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {perms.map((perm) => {
+                      const checked = (
+                        roleMatrix[selectedRole] || []
+                      ).includes(perm.code);
+                      return (
+                        <div
+                          key={perm.code}
+                          onClick={() => toggleRolePermission(perm.code)}
+                          className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                            checked
+                              ? "border-emerald-500/40 bg-emerald-500/5"
+                              : "border-border bg-card hover:bg-secondary/40"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Checkbox checked={checked} />
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-foreground truncate">
+                                {perm.label}
+                              </p>
+                              <p className="text-[11px] font-mono text-muted-foreground truncate">
+                                {perm.code}
+                              </p>
+                            </div>
                           </div>
+                          {checked && (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 ml-2" />
+                          )}
                         </div>
-                        {checked && (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        )}
-                      </label>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── TAB 2: Platform Security, CORS & Rate Limits ─── */}
-        <TabsContent value="security">
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  Zero-Touch Security, Subdomain Isolation & Rate Limiting
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Control tenant resolution rules, JWT lifetimes, rate limits, and CORS allowlists in real time.
-                </p>
-              </div>
-              <Button
-                onClick={handleSavePolicy}
-                disabled={savingPolicy}
-                className="gradient-primary text-white"
-                size="sm"
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                {savingPolicy ? "Applying..." : "Apply Security Policy"}
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                  <div>
-                    <p className="text-sm font-medium">Strict Host-Only Resolution</p>
-                    <p className="text-xs text-muted-foreground">
-                      Reject x-tenant-id header unless matched by Host subdomain
-                    </p>
+                      );
+                    })}
                   </div>
-                  <Switch
-                    checked={policy.enforceHostOnlyResolution}
-                    onCheckedChange={(v) =>
-                      setPolicy({ ...policy, enforceHostOnlyResolution: v })
-                    }
-                  />
                 </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                  <div>
-                    <p className="text-sm font-medium">Maintenance Mode</p>
-                    <p className="text-xs text-muted-foreground">
-                      Temporarily pause tenant mutations during cutover
-                    </p>
-                  </div>
-                  <Switch
-                    checked={policy.maintenanceMode}
-                    onCheckedChange={(v) =>
-                      setPolicy({ ...policy, maintenanceMode: v })
-                    }
-                  />
-                </div>
+      {/* ─── TAB 2: Platform Security, CORS & Rate Limits ─── */}
+      {activeTab === "security" && (
+        <Card className="border border-border bg-card shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
+            <div>
+              <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Zero-Touch Security, Subdomain Isolation & Rate Limiting
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Control tenant resolution rules, JWT lifetimes, rate limits, and
+                CORS allowlists in real time.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleSavePolicy}
+              disabled={savingPolicy}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              {savingPolicy ? "Applying..." : "Apply Security Policy"}
+            </Button>
+          </CardHeader>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                  <div>
-                    <p className="text-sm font-medium">Auto-Activate on Payment</p>
-                    <p className="text-xs text-muted-foreground">
-                      Activate student status when tuition invoice is paid
-                    </p>
-                  </div>
-                  <Switch
-                    checked={policy.autoActivateStudentOnPayment}
-                    onCheckedChange={(v) =>
-                      setPolicy({ ...policy, autoActivateStudentOnPayment: v })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-xs">Login Rate Limit (req/min)</Label>
-                  <Input
-                    type="number"
-                    value={policy.loginRateLimitPerMin}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        loginRateLimitPerMin: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">API Rate Limit (req/min)</Label>
-                  <Input
-                    type="number"
-                    value={policy.apiRateLimitPerMin}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        apiRateLimitPerMin: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Access Token TTL (Minutes)</Label>
-                  <Input
-                    type="number"
-                    value={policy.accessTtlMinutes}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        accessTtlMinutes: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Refresh Token TTL (Days)</Label>
-                  <Input
-                    type="number"
-                    value={policy.refreshTtlDays}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        refreshTtlDays: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs">
-                    Reserved Subdomains Blocklist (comma-separated)
-                  </Label>
-                  <Input
-                    value={policy.reservedSubdomains}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        reservedSubdomains: e.target.value,
-                      })
-                    }
-                    className="mt-1.5 font-mono text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">
-                    Explicit CORS Allowed Origins (alongside *.campusbaba.com)
-                  </Label>
-                  <Input
-                    value={policy.corsAllowedOrigins}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        corsAllowedOrigins: e.target.value,
-                      })
-                    }
-                    className="mt-1.5 font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── TAB 3: R2 Storage, SMS & Payment Gateways ─── */}
-        <TabsContent value="drivers">
-          <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-primary" />
-                  Plug-and-Play Drivers, Cloudflare R2 Guardrails & BTRC SMS Rules
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Monitor active infrastructure adapters and configure file upload limits, SMS rules, and payment gateways.
-                </p>
-              </div>
-              <Button
-                onClick={handleSavePolicy}
-                disabled={savingPolicy}
-                className="gradient-primary text-white"
-                size="sm"
-              >
-                <Save className="h-3.5 w-3.5 mr-1.5" />
-                Save Driver & Gateway Rules
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Active Drivers Status Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                  { label: "StoragePort", val: activeDrivers.storage },
-                  { label: "SmsPort", val: activeDrivers.sms },
-                  { label: "CachePort", val: activeDrivers.cache },
-                  { label: "QueuePort", val: activeDrivers.queue },
-                  {
-                    label: "PaymentGateways",
-                    val: (activeDrivers.payments || []).join(", "),
-                  },
-                ].map((d) => (
-                  <div
-                    key={d.label}
-                    className="p-3 rounded-lg bg-secondary/40 border border-border/50"
-                  >
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {d.label}
-                    </p>
-                    <p className="text-xs font-mono font-semibold text-emerald-400 mt-1 truncate">
-                      {d.val}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-xs">Max Document Upload Size (MB)</Label>
-                  <Input
-                    type="number"
-                    value={policy.storageMaxUploadMb}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        storageMaxUploadMb: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Max Profile Photo Size (KB)</Label>
-                  <Input
-                    type="number"
-                    value={policy.profilePhotoMaxKb}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        profilePhotoMaxKb: +e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">
-                    Default BTRC Masking Sender ID (Max 11 chars)
-                  </Label>
-                  <Input
-                    maxLength={11}
-                    value={policy.defaultSmsSenderId}
-                    onChange={(e) =>
-                      setPolicy({
-                        ...policy,
-                        defaultSmsSenderId: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="mt-1.5 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                <div>
-                  <p className="text-sm font-medium">
-                    Enforce BTRC Promotional SMS Window (09:00 AM – 09:00 PM Asia/Dhaka)
+          <CardContent className="pt-5 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/20">
+                <div className="pr-3">
+                  <p className="text-xs font-semibold">
+                    Strict Host-Only Resolution
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Automatically blocks promotional bulk SMS outside BTRC permitted hours
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Reject x-tenant-id header unless matched by Host subdomain
                   </p>
                 </div>
                 <Switch
-                  checked={policy.enforceBtrcPromotionalWindow}
+                  checked={policy.enforceHostOnlyResolution}
                   onCheckedChange={(v) =>
-                    setPolicy({ ...policy, enforceBtrcPromotionalWindow: v })
+                    setPolicy({ ...policy, enforceHostOnlyResolution: v })
                   }
                 />
               </div>
 
-              <div>
-                <Label className="text-xs mb-2 block">
-                  Enabled Bangladeshi Payment Gateways
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { code: "manual", label: "Manual Send-Money TrxID (bKash/Nagad/Rocket)" },
-                    { code: "bkash", label: "bKash Tokenized Merchant" },
-                    { code: "nagad", label: "Nagad Merchant API" },
-                    { code: "sslcommerz", label: "SSLCommerz Aggregator" },
-                    { code: "aamarpay", label: "aamarPay Aggregator" },
-                  ].map((gw) => {
-                    const active = (policy.enabledPaymentGateways || []).includes(
-                      gw.code
-                    );
-                    return (
-                      <label
-                        key={gw.code}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs ${
-                          active
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border/50 text-muted-foreground"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={active}
-                          onCheckedChange={() => togglePaymentGateway(gw.code)}
-                        />
-                        <span>{gw.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── TAB 4: Theme & Appearance ─── */}
-        <TabsContent value="appearance">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Palette className="h-4 w-4 text-primary" />
-                Appearance Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Theme</p>
-                  <p className="text-xs text-muted-foreground">
-                    Choose your preferred color scheme
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/20">
+                <div className="pr-3">
+                  <p className="text-xs font-semibold">Maintenance Mode</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Temporarily pause tenant mutations during cutover
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {[
-                    { value: "light", icon: Sun, label: "Light" },
-                    { value: "dark", icon: Moon, label: "Dark" },
-                  ].map(({ value, icon: Icon, label }) => (
-                    <Button
-                      key={value}
-                      variant={theme === value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTheme(value)}
-                      className={
-                        theme === value ? "gradient-primary text-white" : ""
-                      }
-                    >
-                      <Icon className="h-3.5 w-3.5 mr-1.5" />
-                      {label}
-                    </Button>
-                  ))}
-                </div>
+                <Switch
+                  checked={policy.maintenanceMode}
+                  onCheckedChange={(v) =>
+                    setPolicy({ ...policy, maintenanceMode: v })
+                  }
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/20">
+                <div className="pr-3">
+                  <p className="text-xs font-semibold">
+                    Auto-Activate on Payment
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Activate student status when tuition invoice is paid
+                  </p>
+                </div>
+                <Switch
+                  checked={policy.autoActivateStudentOnPayment}
+                  onCheckedChange={(v) =>
+                    setPolicy({ ...policy, autoActivateStudentOnPayment: v })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Login Rate Limit (req/min)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.loginRateLimitPerMin}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      loginRateLimitPerMin: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  API Rate Limit (req/min)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.apiRateLimitPerMin}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      apiRateLimitPerMin: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Access Token TTL (Minutes)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.accessTtlMinutes}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      accessTtlMinutes: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Refresh Token TTL (Days)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.refreshTtlDays}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      refreshTtlDays: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Reserved Subdomains Blocklist (comma-separated)
+                </Label>
+                <Input
+                  value={policy.reservedSubdomains}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      reservedSubdomains: e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Explicit CORS Allowed Origins (alongside *.campusbaba.com)
+                </Label>
+                <Input
+                  value={policy.corsAllowedOrigins}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      corsAllowedOrigins: e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── TAB 3: R2 Storage, SMS & Payment Gateways ─── */}
+      {activeTab === "drivers" && (
+        <Card className="border border-border bg-card shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-4">
+            <div>
+              <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                Plug-and-Play Drivers, Cloudflare R2 Guardrails & BTRC SMS Rules
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Monitor active infrastructure adapters and configure file upload
+                limits, SMS rules, and payment gateways.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleSavePolicy}
+              disabled={savingPolicy}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              Save Driver & Gateway Rules
+            </Button>
+          </CardHeader>
+
+          <CardContent className="pt-5 space-y-6">
+            {/* Active Drivers Status Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[
+                { label: "StoragePort", val: activeDrivers.storage },
+                { label: "SmsPort", val: activeDrivers.sms },
+                { label: "CachePort", val: activeDrivers.cache },
+                { label: "QueuePort", val: activeDrivers.queue },
+                {
+                  label: "PaymentGateways",
+                  val: (activeDrivers.payments || []).join(", "),
+                },
+              ].map((d) => (
+                <div
+                  key={d.label}
+                  className="p-3 rounded-lg bg-secondary/40 border border-border"
+                >
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    {d.label}
+                  </p>
+                  <p className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 mt-1 truncate">
+                    {d.val}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Max Document Upload Size (MB)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.storageMaxUploadMb}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      storageMaxUploadMb: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Max Profile Photo Size (KB)
+                </Label>
+                <Input
+                  type="number"
+                  value={policy.profilePhotoMaxKb}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      profilePhotoMaxKb: +e.target.value,
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Default BTRC Masking Sender ID (Max 11 chars)
+                </Label>
+                <Input
+                  maxLength={11}
+                  value={policy.defaultSmsSenderId}
+                  onChange={(e) =>
+                    setPolicy({
+                      ...policy,
+                      defaultSmsSenderId: e.target.value.toUpperCase(),
+                    })
+                  }
+                  className="mt-1.5 h-9 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/20">
+              <div>
+                <p className="text-xs font-semibold">
+                  Enforce BTRC Promotional SMS Window (09:00 AM – 09:00 PM
+                  Asia/Dhaka)
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Automatically blocks promotional bulk SMS outside BTRC
+                  permitted hours
+                </p>
+              </div>
+              <Switch
+                checked={policy.enforceBtrcPromotionalWindow}
+                onCheckedChange={(v) =>
+                  setPolicy({ ...policy, enforceBtrcPromotionalWindow: v })
+                }
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2.5 block">
+                Enabled Bangladeshi Payment Gateways
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    code: "manual",
+                    label: "Manual Send-Money TrxID (bKash/Nagad/Rocket)",
+                  },
+                  { code: "bkash", label: "bKash Tokenized Merchant" },
+                  { code: "nagad", label: "Nagad Merchant API" },
+                  { code: "sslcommerz", label: "SSLCommerz Aggregator" },
+                  { code: "aamarpay", label: "aamarPay Aggregator" },
+                ].map((gw) => {
+                  const active = (policy.enabledPaymentGateways || []).includes(
+                    gw.code
+                  );
+                  return (
+                    <div
+                      key={gw.code}
+                      onClick={() => togglePaymentGateway(gw.code)}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer text-xs transition-colors ${
+                        active
+                          ? "border-emerald-500/40 bg-emerald-500/5 text-foreground"
+                          : "border-border text-muted-foreground hover:bg-secondary/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Checkbox checked={active} />
+                        <span className="font-medium">{gw.label}</span>
+                      </div>
+                      {active && (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ─── TAB 4: Theme & Appearance ─── */}
+      {activeTab === "appearance" && (
+        <Card className="border border-border bg-card shadow-xs">
+          <CardHeader className="border-b border-border/60 pb-4">
+            <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Appearance & Theme Mode
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Switch between eye-friendly Soft Light Mode and Soft Charcoal Dark
+              Mode.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold">Interface Color Scheme</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Applies immediately across all RMS dashboards and tables
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {[
+                  { value: "light", icon: Sun, label: "Soft Light" },
+                  { value: "dark", icon: Moon, label: "Soft Dark" },
+                ].map(({ value, icon: Icon, label }) => (
+                  <Button
+                    key={value}
+                    variant={theme === value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTheme(value)}
+                    className="h-8 text-xs"
+                  >
+                    <Icon className="h-3.5 w-3.5 mr-1.5" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

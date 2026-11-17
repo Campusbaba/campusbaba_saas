@@ -100,7 +100,15 @@
       "myRoutines": "My Routines",
       "classRooms": "Class Rooms",
       "examSchedule": "Exam Schedule",
-      "profitExpense": "Profit / Expense"
+      "profitExpense": "Profit / Expense",
+      "coachingBatches": "Coaching Batches",
+      "studyLibrary": "Study Library",
+      "lectureSheets": "Lecture Sheets",
+      "assignments": "Homework",
+      "mcqTests": "MCQ Practice",
+      "mfsVerification": "MFS TrxID Verify",
+      "mfsPay": "bKash / Nagad Pay",
+      "smsGateway": "SMS Gateway"
     }
   },
   "attendance": {
