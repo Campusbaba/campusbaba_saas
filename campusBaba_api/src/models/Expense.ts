@@ -55,7 +55,7 @@ const expenseSchema = new Schema<IExpense>(
     },
     employeeId: {
       type: String,
-      refPath: "employeeModel",
+      ref: "Employee",
     },
     approvedBy: {
       type: String,

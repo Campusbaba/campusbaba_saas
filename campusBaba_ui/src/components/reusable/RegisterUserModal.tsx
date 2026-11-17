@@ -24,6 +24,7 @@ import { useParents } from "@/hooks/useParents";
 import { useStudents } from "@/hooks/useStudents";
 import { Copy, Download, RefreshCw, QrCode, UserCheck, ChevronRight } from "lucide-react";
 import { toast } from "@/lib/toast";
+import api from "@/lib/axios";
 
 interface Props {
     open: boolean;
@@ -118,7 +119,14 @@ export function RegisterUserModal({ open, onClose }: Props) {
         if (!selectedPerson) { toast.error("Please select a person"); return; }
         setGenerating(true);
         try {
-            const token = buildToken({
+            // P0-8 Fix: Request server-issued, signed, single-use, tenant-bound invitation token
+            const inviteRes = await api.post("/auth/invitations", {
+                email: selectedPerson.email,
+                role,
+                referenceId: selectedPerson.id,
+                name: selectedPerson.name,
+            });
+            const token = inviteRes.data?.data?.token || buildToken({
                 email: selectedPerson.email,
                 role,
                 referenceId: selectedPerson.id,
@@ -139,8 +147,8 @@ export function RegisterUserModal({ open, onClose }: Props) {
             });
             setQrDataUrl(dataUrl);
             setStep(2);
-        } catch {
-            toast.error("Failed to generate QR code");
+        } catch (err: any) {
+            toast.error(err.message || "Failed to generate QR code");
         } finally {
             setGenerating(false);
         }

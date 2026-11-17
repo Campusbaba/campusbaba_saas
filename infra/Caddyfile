@@ -1,0 +1,35 @@
+# =============================================================================
+# Caddy Reverse Proxy — Wildcard Subdomain (*.campusbaba.com / *.localhost)
+# & On-Demand Custom Domain TLS Configuration
+# =============================================================================
+
+{
+  on_demand_tls {
+    ask http://host.docker.internal:5001/health
+  }
+}
+
+# SuperAdmin RMS Portal
+rms.campusbaba.com, rms.localhost {
+  reverse_proxy host.docker.internal:3001
+}
+
+# Central API Gateway
+api.campusbaba.com, api.localhost {
+  reverse_proxy host.docker.internal:5001
+}
+
+# Multi-Tenant Institution Portals (*.campusbaba.com & *.localhost)
+*.campusbaba.com, *.localhost {
+  tls {
+    on_demand
+  }
+
+  handle /api/* {
+    reverse_proxy host.docker.internal:5001
+  }
+
+  handle {
+    reverse_proxy host.docker.internal:3000
+  }
+}

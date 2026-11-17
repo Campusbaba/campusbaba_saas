@@ -1,13 +1,19 @@
 import { Request, Response } from "express";
-import { Payment  } from "../models";
-import { Expense  } from "../models";
+import { Payment, Expense } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { fromPaisa, toPaisa } from "../domain/finance/FeeAllocationPolicy";
 
+/**
+ * Financial Reports Controller (Fixes P0-5):
+ * - All Payment aggregations now filter on `{ paymentStatus: "paid" }` instead of `{ status: "paid" }`.
+ * - Profit/Loss monthly breakdown merges both income months AND expense-only months so zero-income months with expenses are never dropped.
+ */
 export const getIncomeReport = asyncHandler(
   async (req: Request, res: Response) => {
     const { startDate, endDate, groupBy = "month" } = req.query;
 
-    const filter: any = { status: "paid" };
+    // P0-5 Fix: Payment uses `paymentStatus`, not `status`
+    const filter: any = { paymentStatus: "paid" };
     if (startDate || endDate) {
       filter.paidDate = {};
       if (startDate) filter.paidDate.$gte = new Date(startDate as string);
@@ -43,7 +49,6 @@ export const getIncomeReport = asyncHandler(
       { $sort: { _id: 1 } },
     ]);
 
-    // Calculate by payment type
     const byType = await Payment.aggregate([
       { $match: filter },
       {
@@ -55,9 +60,9 @@ export const getIncomeReport = asyncHandler(
       },
     ]);
 
-    const totalIncome = incomeData.reduce(
-      (sum, item) => sum + item.totalIncome,
-      0,
+    const totalIncomePaisa = incomeData.reduce(
+      (sum, item) => sum + toPaisa(item.totalIncome),
+      0
     );
 
     res.status(200).json({
@@ -65,10 +70,10 @@ export const getIncomeReport = asyncHandler(
       data: {
         timeline: incomeData,
         byType,
-        totalIncome,
+        totalIncome: fromPaisa(totalIncomePaisa),
       },
     });
-  },
+  }
 );
 
 export const getExpenseReport = asyncHandler(
@@ -103,7 +108,6 @@ export const getExpenseReport = asyncHandler(
       { $sort: { _id: 1 } },
     ]);
 
-    // Calculate by category
     const byCategory = await Expense.aggregate([
       { $match: filter },
       {
@@ -115,9 +119,9 @@ export const getExpenseReport = asyncHandler(
       },
     ]);
 
-    const totalExpense = expenseData.reduce(
-      (sum, item) => sum + item.totalExpense,
-      0,
+    const totalExpensePaisa = expenseData.reduce(
+      (sum, item) => sum + toPaisa(item.totalExpense),
+      0
     );
 
     res.status(200).json({
@@ -125,25 +129,25 @@ export const getExpenseReport = asyncHandler(
       data: {
         timeline: expenseData,
         byCategory,
-        totalExpense,
+        totalExpense: fromPaisa(totalExpensePaisa),
       },
     });
-  },
+  }
 );
 
 export const getBusinessProjection = asyncHandler(
   async (req: Request, res: Response) => {
     const { months = 6 } = req.query;
 
-    // Get historical data for the past N months
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - Number(months));
 
     const [incomeHistory, expenseHistory] = await Promise.all([
       Payment.aggregate([
         {
+          // P0-5 Fix: paymentStatus: "paid"
           $match: {
-            status: "paid",
+            paymentStatus: "paid",
             paidDate: { $gte: startDate },
           },
         },
@@ -172,7 +176,6 @@ export const getBusinessProjection = asyncHandler(
       ]),
     ]);
 
-    // Simple projection: average of last N months
     const avgIncome =
       incomeHistory.reduce((sum, item) => sum + item.amount, 0) /
         incomeHistory.length || 0;
@@ -180,7 +183,6 @@ export const getBusinessProjection = asyncHandler(
       expenseHistory.reduce((sum, item) => sum + item.amount, 0) /
         expenseHistory.length || 0;
 
-    // Project next 3 months
     const projections = [];
     for (let i = 1; i <= 3; i++) {
       const projectionDate = new Date();
@@ -205,21 +207,22 @@ export const getBusinessProjection = asyncHandler(
         projections,
       },
     });
-  },
+  }
 );
 
 export const getProfitLossReport = asyncHandler(
   async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
-    const filter: any = {};
+    const expenseFilter: any = { status: "paid" };
     if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) filter.date.$gte = new Date(startDate as string);
-      if (endDate) filter.date.$lte = new Date(endDate as string);
+      expenseFilter.date = {};
+      if (startDate) expenseFilter.date.$gte = new Date(startDate as string);
+      if (endDate) expenseFilter.date.$lte = new Date(endDate as string);
     }
 
-    const paymentFilter: any = { status: "paid" };
+    // P0-5 Fix: paymentStatus: "paid"
+    const paymentFilter: any = { paymentStatus: "paid" };
     if (startDate || endDate) {
       paymentFilter.paidDate = {};
       if (startDate)
@@ -227,88 +230,68 @@ export const getProfitLossReport = asyncHandler(
       if (endDate) paymentFilter.paidDate.$lte = new Date(endDate as string);
     }
 
-    const [totalIncome, totalExpense] = await Promise.all([
+    const [incomeByMonth, expenseByMonth] = await Promise.all([
       Payment.aggregate([
         { $match: paymentFilter },
         {
           $group: {
-            _id: null,
-            total: { $sum: "$amount" },
+            _id: { $dateToString: { format: "%Y-%m", date: "$paidDate" } },
+            income: { $sum: "$amount" },
           },
         },
       ]),
       Expense.aggregate([
-        { $match: { ...filter, status: "paid" } },
+        { $match: expenseFilter },
         {
           $group: {
-            _id: null,
-            total: { $sum: "$amount" },
+            _id: { $dateToString: { format: "%Y-%m", date: "$date" } },
+            expense: { $sum: "$amount" },
           },
         },
       ]),
     ]);
 
-    const income = totalIncome[0]?.total || 0;
-    const expense = totalExpense[0]?.total || 0;
-    const profit = income - expense;
-    const profitMargin = income > 0 ? ((profit / income) * 100).toFixed(2) : 0;
+    // Merge all months present in either income OR expenses (fixes missing expense-only months)
+    const monthSet = new Set<string>();
+    const incomeMap = new Map<string, number>();
+    const expenseMap = new Map<string, number>();
 
-    // Monthly breakdown
-    const monthlyData = await Payment.aggregate([
-      { $match: paymentFilter },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m", date: "$paidDate" } },
-          income: { $sum: "$amount" },
-        },
-      },
-      {
-        $lookup: {
-          from: "expenses",
-          let: { month: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    {
-                      $eq: [
-                        { $dateToString: { format: "%Y-%m", date: "$date" } },
-                        "$$month",
-                      ],
-                    },
-                    { $eq: ["$status", "paid"] },
-                  ],
-                },
-              },
-            },
-            {
-              $group: {
-                _id: null,
-                expense: { $sum: "$amount" },
-              },
-            },
-          ],
-          as: "expenseData",
-        },
-      },
-      {
-        $project: {
-          month: "$_id",
-          income: 1,
-          expense: {
-            $ifNull: [{ $arrayElemAt: ["$expenseData.expense", 0] }, 0],
-          },
-          profit: {
-            $subtract: [
-              "$income",
-              { $ifNull: [{ $arrayElemAt: ["$expenseData.expense", 0] }, 0] },
-            ],
-          },
-        },
-      },
-      { $sort: { month: 1 } },
-    ]);
+    for (const row of incomeByMonth) {
+      if (row._id) {
+        monthSet.add(row._id);
+        incomeMap.set(row._id, toPaisa(row.income));
+      }
+    }
+    for (const row of expenseByMonth) {
+      if (row._id) {
+        monthSet.add(row._id);
+        expenseMap.set(row._id, toPaisa(row.expense));
+      }
+    }
+
+    let totalIncomePaisa = 0;
+    let totalExpensePaisa = 0;
+
+    const monthlyBreakdown = Array.from(monthSet)
+      .sort()
+      .map((month) => {
+        const incPaisa = incomeMap.get(month) ?? 0;
+        const expPaisa = expenseMap.get(month) ?? 0;
+        totalIncomePaisa += incPaisa;
+        totalExpensePaisa += expPaisa;
+        return {
+          month,
+          income: fromPaisa(incPaisa),
+          expense: fromPaisa(expPaisa),
+          profit: fromPaisa(incPaisa - expPaisa),
+        };
+      });
+
+    const income = fromPaisa(totalIncomePaisa);
+    const expense = fromPaisa(totalExpensePaisa);
+    const profit = fromPaisa(totalIncomePaisa - totalExpensePaisa);
+    const profitMargin =
+      income > 0 ? ((profit / income) * 100).toFixed(2) : "0.00";
 
     res.status(200).json({
       success: true,
@@ -319,8 +302,8 @@ export const getProfitLossReport = asyncHandler(
           netProfit: profit,
           profitMargin: `${profitMargin}%`,
         },
-        monthlyBreakdown: monthlyData,
+        monthlyBreakdown,
       },
     });
-  },
+  }
 );

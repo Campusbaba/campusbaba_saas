@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { Exam  } from "../models";
-import { ExamMark  } from "../models";
+import { Exam, ExamMark, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
@@ -9,7 +8,12 @@ import {
 } from "../utils/pagination";
 
 export const createExam = asyncHandler(async (req: Request, res: Response) => {
-  const exam = await Exam.create(req.body);
+  let examId = req.body.examId;
+  if (!examId) {
+    const seq = await nextSequence("exam");
+    examId = `EXM-${String(seq).padStart(4, "0")}`;
+  }
+  const exam = await Exam.create({ ...req.body, examId });
 
   res.status(201).json({
     success: true,
@@ -244,7 +248,7 @@ export const getStudentExamResults = asyncHandler(
 
     const results = await ExamMark.find({
       studentId,
-      status: { $in: ["evaluated"] },
+      status: { $in: ["evaluated", "published"] },
     })
       .populate("examId", "name examType totalMarks passingMarks date courseId")
       .populate({

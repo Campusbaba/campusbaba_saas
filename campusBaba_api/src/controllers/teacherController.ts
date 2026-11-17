@@ -1,19 +1,31 @@
 import { Request, Response } from "express";
-import { Teacher  } from "../models";
-import { nextSequence  } from "../models";
+import { Teacher, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
   getPaginationParams,
   createPaginationResult,
 } from "../utils/pagination";
+import { container } from "../composition/container";
 
 export const createTeacher = asyncHandler(
   async (req: Request, res: Response) => {
-    if (req.tenant) {
-      const activeTeachersCount = await Teacher.countDocuments({ status: "active" });
-      if (activeTeachersCount >= req.tenant.maxTeachers) {
-        throw new AppError(403, `Tenant limit reached. Maximum ${req.tenant.maxTeachers} active teachers allowed.`);
+    const targetStatus = req.body.status || "active";
+
+    // P0-9 Fix: Atomic teacher quota check
+    if (req.tenant && targetStatus === "active") {
+      const activeTeachersCount = await Teacher.countDocuments({
+        status: "active",
+      });
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey: req.tenant.subdomain,
+          resource: "teachers",
+          currentCountInDb: activeTeachersCount,
+          limit: req.tenant.maxTeachers,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
       }
     }
 
@@ -26,7 +38,7 @@ export const createTeacher = asyncHandler(
       message: "Teacher created successfully",
       data: teacher,
     });
-  },
+  }
 );
 
 export const getAllTeachers = asyncHandler(
@@ -65,14 +77,14 @@ export const getAllTeachers = asyncHandler(
       success: true,
       ...result,
     });
-  },
+  }
 );
 
 export const getTeacherById = asyncHandler(
   async (req: Request, res: Response) => {
     const teacher = await Teacher.findById(req.params.id).populate(
       "departmentId",
-      "name code description",
+      "name code description"
     );
 
     if (!teacher) {
@@ -83,26 +95,47 @@ export const getTeacherById = asyncHandler(
       success: true,
       data: teacher,
     });
-  },
+  }
 );
 
 export const updateTeacher = asyncHandler(
   async (req: Request, res: Response) => {
+    const existing = await Teacher.findById(req.params.id);
+    if (!existing) {
+      throw new AppError(404, "Teacher not found");
+    }
+
+    if (
+      req.tenant &&
+      existing.status !== "active" &&
+      req.body.status === "active"
+    ) {
+      const activeTeachersCount = await Teacher.countDocuments({
+        status: "active",
+      });
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey: req.tenant.subdomain,
+          resource: "teachers",
+          currentCountInDb: activeTeachersCount,
+          limit: req.tenant.maxTeachers,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
     const teacher = await Teacher.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-
-    if (!teacher) {
-      throw new AppError(404, "Teacher not found");
-    }
 
     res.status(200).json({
       success: true,
       message: "Teacher updated successfully",
       data: teacher,
     });
-  },
+  }
 );
 
 export const deleteTeacher = asyncHandler(
@@ -117,11 +150,11 @@ export const deleteTeacher = asyncHandler(
       success: true,
       message: "Teacher deleted successfully",
     });
-  },
+  }
 );
 
 export const getTeacherStats = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const stats = await Teacher.aggregate([
       {
         $group: {
@@ -142,5 +175,5 @@ export const getTeacherStats = asyncHandler(
         byStatus: stats,
       },
     });
-  },
+  }
 );

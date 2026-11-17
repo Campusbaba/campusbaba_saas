@@ -1,19 +1,42 @@
 import { Request, Response } from "express";
-import { Student  } from "../models";
-import { nextSequence  } from "../models";
+import { Student, ClassRoom, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
   getPaginationParams,
   createPaginationResult,
 } from "../utils/pagination";
+import { container } from "../composition/container";
 
 export const createStudent = asyncHandler(
   async (req: Request, res: Response) => {
-    if (req.tenant) {
-      const activeStudentsCount = await Student.countDocuments({ status: "active" });
-      if (activeStudentsCount >= req.tenant.maxStudents) {
-        throw new AppError(403, `Tenant limit reached. Maximum ${req.tenant.maxStudents} active students allowed.`);
+    const targetStatus = req.body.status || "active";
+
+    // P0-9 Fix: Atomic quota enforcement
+    if (req.tenant && targetStatus === "active") {
+      const activeStudentsCount = await Student.countDocuments({
+        status: "active",
+      });
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey: req.tenant.subdomain,
+          resource: "students",
+          currentCountInDb: activeStudentsCount,
+          limit: req.tenant.maxStudents,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
+    // D-16 Fix: Check classroom capacity and increment currentEnrollment
+    if (req.body.classRoomId) {
+      const classRoom = await ClassRoom.findById(req.body.classRoomId);
+      if (classRoom && classRoom.currentEnrollment >= classRoom.capacity) {
+        throw new AppError(
+          400,
+          `Classroom '${classRoom.name}' has reached maximum capacity (${classRoom.capacity})`
+        );
       }
     }
 
@@ -21,12 +44,18 @@ export const createStudent = asyncHandler(
     const studentId = `STU-${String(seq).padStart(4, "0")}`;
     const student = await Student.create({ ...req.body, studentId });
 
+    if (student.classRoomId) {
+      await ClassRoom.findByIdAndUpdate(student.classRoomId, {
+        $inc: { currentEnrollment: 1 },
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Student created successfully",
       data: student,
     });
-  },
+  }
 );
 
 export const getAllStudents = asyncHandler(
@@ -66,7 +95,7 @@ export const getAllStudents = asyncHandler(
       success: true,
       ...result,
     });
-  },
+  }
 );
 
 export const getStudentById = asyncHandler(
@@ -83,26 +112,48 @@ export const getStudentById = asyncHandler(
       success: true,
       data: student,
     });
-  },
+  }
 );
 
 export const updateStudent = asyncHandler(
   async (req: Request, res: Response) => {
+    const existing = await Student.findById(req.params.id);
+    if (!existing) {
+      throw new AppError(404, "Student not found");
+    }
+
+    // P0-9 Fix: Prevent bypassing maxStudents by creating inactive and updating to active
+    if (
+      req.tenant &&
+      existing.status !== "active" &&
+      req.body.status === "active"
+    ) {
+      const activeStudentsCount = await Student.countDocuments({
+        status: "active",
+      });
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey: req.tenant.subdomain,
+          resource: "students",
+          currentCountInDb: activeStudentsCount,
+          limit: req.tenant.maxStudents,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
     const student = await Student.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-
-    if (!student) {
-      throw new AppError(404, "Student not found");
-    }
 
     res.status(200).json({
       success: true,
       message: "Student updated successfully",
       data: student,
     });
-  },
+  }
 );
 
 export const deleteStudent = asyncHandler(
@@ -113,11 +164,17 @@ export const deleteStudent = asyncHandler(
       throw new AppError(404, "Student not found");
     }
 
+    if (student.classRoomId) {
+      await ClassRoom.findByIdAndUpdate(student.classRoomId, {
+        $inc: { currentEnrollment: -1 },
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Student deleted successfully",
     });
-  },
+  }
 );
 
 export const getStudentStats = asyncHandler(
@@ -142,5 +199,5 @@ export const getStudentStats = asyncHandler(
         byStatus: stats,
       },
     });
-  },
+  }
 );

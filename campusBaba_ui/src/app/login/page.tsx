@@ -109,6 +109,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
+                    {process.env.NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS === "true" && (
                     <div className="w-full max-w-xl mx-auto rounded-2xl border border-slate-200 bg-sky-50/80 p-5 shadow-sm">
                         <h3 className="text-center text-sm font-semibold text-slate-900">Role Credentials</h3>
                         {/* <div className="mt-3 overflow-x-auto">
@@ -242,6 +243,7 @@ export default function LoginPage() {
                             </table>
                         </div>
                     </div>
+                    )}
                 </section>
 
 

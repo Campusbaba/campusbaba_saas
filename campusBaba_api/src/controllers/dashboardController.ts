@@ -161,7 +161,7 @@ export const getPaymentTable = asyncHandler(
     const { page = 1, limit = 10, status } = req.query;
 
     const filter: any = {};
-    if (status) filter.status = status;
+    if (status) filter.paymentStatus = status;
 
     const skip = (Number(page) - 1) * Number(limit);
 

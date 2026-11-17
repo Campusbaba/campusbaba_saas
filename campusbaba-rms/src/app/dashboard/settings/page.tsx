@@ -304,7 +304,7 @@ export default function SettingsPage() {
                   <Select
                     value={defaults.defaultPlan}
                     onValueChange={(val) =>
-                      setDefaults({ ...defaults, defaultPlan: val })
+                      setDefaults({ ...defaults, defaultPlan: val ?? "postpaid" })
                     }
                   >
                     <SelectTrigger className="mt-1.5">

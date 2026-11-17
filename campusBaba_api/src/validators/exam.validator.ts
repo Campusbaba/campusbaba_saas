@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createExamSchema = z.object({
   body: z.object({
+    examId: z.string().min(1).optional(),
     name: z.string().min(1, "Exam name is required"),
     examType: z.enum(["midterm", "final", "quiz", "assignment", "practical"]),
     courseId: z.string().min(1, "Course is required"),

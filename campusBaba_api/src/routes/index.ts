@@ -15,34 +15,52 @@ import expenseRoutes from "./expenseRoutes";
 import noticeRoutes from "./noticeRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import reportRoutes from "./reportRoutes";
+import bdModulesRoutes from "./bdModulesRoutes";
 
 import superAdminRoutes from "./superAdminRoutes";
 import { tenantResolver } from "../middlewares/tenantResolver";
+import { authenticate, authorize } from "../middlewares/authMiddleware";
+import { PERMISSIONS } from "../domain/rbac/Permissions";
 
 const router = Router();
 
-// Master DB Routes
+// Master DB Routes (Protected inside superAdminRoutes via requireSuperAdmin — Fixes P0-1)
 router.use("/superadmin", superAdminRoutes);
 
-// Tenant DB Routes (Requires tenant ID)
+// Tenant DB Routes (Requires verified tenant Host / Context — Fixes P0-3)
 router.use(tenantResolver);
 
-// API Routes
+// Auth & Invitations Routes
 router.use("/auth", authRoutes);
-router.use("/students", studentRoutes);
-router.use("/parents", parentRoutes);
-router.use("/teachers", teacherRoutes);
-router.use("/employees", employeeRoutes);
-router.use("/departments", departmentRoutes);
-router.use("/courses", courseRoutes);
-router.use("/classrooms", classRoomRoutes);
-router.use("/attendance", attendanceRoutes);
-router.use("/routines", routineRoutes);
-router.use("/exams", examRoutes);
-router.use("/payments", paymentRoutes);
-router.use("/expenses", expenseRoutes);
-router.use("/notices", noticeRoutes);
-router.use("/dashboard", dashboardRoutes);
-router.use("/reports", reportRoutes);
+
+// P0-2 Fix: All Tenant Resource Routes require verified tenant-bound JWT + RBAC Permissions
+router.use("/students", authenticate, studentRoutes);
+router.use("/parents", authenticate, parentRoutes);
+router.use("/teachers", authenticate, teacherRoutes);
+router.use("/employees", authenticate, employeeRoutes);
+router.use("/departments", authenticate, departmentRoutes);
+router.use("/courses", authenticate, courseRoutes);
+router.use("/classrooms", authenticate, classRoomRoutes);
+router.use("/attendance", authenticate, attendanceRoutes);
+router.use("/routines", authenticate, routineRoutes);
+router.use("/exams", authenticate, examRoutes);
+router.use("/payments", authenticate, paymentRoutes);
+router.use(
+  "/expenses",
+  authenticate,
+  authorize(PERMISSIONS.EXPENSES_READ),
+  expenseRoutes
+);
+router.use("/notices", authenticate, noticeRoutes);
+router.use("/dashboard", authenticate, dashboardRoutes);
+router.use(
+  "/reports",
+  authenticate,
+  authorize(PERMISSIONS.REPORTS_FINANCIAL_READ),
+  reportRoutes
+);
+
+// Phase 4 Bangladesh & Cloudflare R2 Storage Modules
+router.use("/bd", bdModulesRoutes);
 
 export default router;

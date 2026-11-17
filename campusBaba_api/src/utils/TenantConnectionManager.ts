@@ -18,7 +18,7 @@ class TenantConnectionManager {
     }
 
     const conn = mongoose.createConnection(uri);
-    
+
     // Register all tenant models
     conn.model("Counter", schemas.counterSchema);
     conn.model("Attendance", schemas.attendanceSchema);
@@ -41,7 +41,26 @@ class TenantConnectionManager {
     return conn;
   }
 
-  static getTenantModel<T>(connection: Connection, modelName: string): mongoose.Model<T> {
+  static async evictAndDropTenantDatabase(tenantId: string): Promise<boolean> {
+    const conn = this.tenantConnections[tenantId];
+    if (!conn) return false;
+    try {
+      if (conn.readyState === 1 && conn.db) {
+        await conn.db.dropDatabase();
+      }
+      await conn.close();
+    } catch {
+      // Ignore if connection was never opened
+    } finally {
+      delete this.tenantConnections[tenantId];
+    }
+    return true;
+  }
+
+  static getTenantModel<T>(
+    connection: Connection,
+    modelName: string
+  ): mongoose.Model<T> {
     return connection.model<T>(modelName);
   }
 }

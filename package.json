@@ -1,0 +1,16 @@
+{
+  "name": "campusbaba-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter @campusbaba/shared build && pnpm --filter schooler_api build",
+    "test": "pnpm --filter schooler_api test",
+    "verify:rls": "pnpm --filter schooler_api verify:rls",
+    "verify:boundaries": "pnpm --filter schooler_api verify:boundaries",
+    "verify:env": "pnpm --filter schooler_api verify:env",
+    "verify:all": "pnpm --filter schooler_api verify:all"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

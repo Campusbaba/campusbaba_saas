@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
 import { ChartCard } from "@/components/chart-card";
-import { getOrganizations } from "@/lib/api";
+import { getOrganizations, getPlans } from "@/lib/api";
 
 interface Tenant {
   _id: string;
@@ -57,13 +57,24 @@ const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"];
 
 export default function BillingPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [planRates, setPlanRates] = useState<Record<string, number>>(PLAN_RATES);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await getOrganizations();
-        setTenants(res.data);
+        const [orgsRes, plansRes] = await Promise.all([
+          getOrganizations(),
+          getPlans().catch(() => ({ data: [] })),
+        ]);
+        setTenants(orgsRes.data || []);
+        if (Array.isArray(plansRes.data) && plansRes.data.length > 0) {
+          const dynamicMap: Record<string, number> = { ...PLAN_RATES };
+          plansRes.data.forEach((p: { code: string; priceBdt: number }) => {
+            dynamicMap[p.code] = Number(p.priceBdt);
+          });
+          setPlanRates(dynamicMap);
+        }
       } catch {
         // ignore
       } finally {
@@ -77,7 +88,7 @@ export default function BillingPage() {
     (t) => t.subscriptionStatus === "active"
   );
   const totalMRR = activeTenants.reduce(
-    (sum, t) => sum + (PLAN_RATES[t.billingPlan] || 5000),
+    (sum, t) => sum + (planRates[t.billingPlan] || 5000),
     0
   );
   const totalARR = totalMRR * 12;

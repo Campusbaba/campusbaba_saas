@@ -7,6 +7,11 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "test": "ts-node tests/run-all-tests.ts",
+    "verify:rls": "ts-node scripts/verify-rls.ts",
+    "verify:boundaries": "ts-node scripts/check-env-and-boundaries.ts",
+    "verify:env": "ts-node scripts/check-env-and-boundaries.ts",
+    "verify:all": "ts-node scripts/verify-rls.ts && ts-node scripts/check-env-and-boundaries.ts && ts-node tests/run-all-tests.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

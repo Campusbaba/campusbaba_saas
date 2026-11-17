@@ -1,13 +1,15 @@
 import axios from "axios";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5002/api/v1";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE,
+  withCredentials: true, // P0-7 Fix: Send httpOnly Secure SameSite=Lax cookies automatically
   timeout: 30000,
 });
 
-// Attach auth token to every request
+// Attach Bearer fallback if present
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("superadmin_token");
@@ -38,6 +40,41 @@ export async function loginSuperAdmin(email: string, password: string) {
   return res.data;
 }
 
+export async function logoutSuperAdmin() {
+  const res = await api.post("/superadmin/logout");
+  return res.data;
+}
+
+// ─── Plans (Fixes P0-11) ────────────────────────────
+export async function getPlans() {
+  const res = await api.get("/superadmin/plans");
+  return res.data;
+}
+
+export async function upsertPlan(data: {
+  code: string;
+  name: string;
+  nameBn?: string;
+  priceBdt: number;
+  maxStudents?: number;
+  maxTeachers?: number;
+  maxAdmins?: number;
+  storageLimitMb?: number;
+}) {
+  const res = await api.post("/superadmin/plans", data);
+  return res.data;
+}
+
+// ─── Audit Logs ─────────────────────────────────────
+export async function getAuditLogs(params?: {
+  tenantId?: string;
+  action?: string;
+  limit?: number;
+}) {
+  const res = await api.get("/superadmin/audit-logs", { params });
+  return res.data;
+}
+
 // ─── Dashboard Stats ────────────────────────────────
 export async function getDashboardStats() {
   const res = await api.get("/superadmin/dashboard-stats");
@@ -62,6 +99,7 @@ export async function provisionTenant(data: {
   adminPassword: string;
   maxStudents?: number;
   maxTeachers?: number;
+  billingPlan?: string;
 }) {
   const res = await api.post("/superadmin/tenants", data);
   return res.data;
@@ -88,6 +126,18 @@ export async function suspendOrganization(id: string) {
 
 export async function activateOrganization(id: string) {
   const res = await api.post(`/superadmin/tenants/${id}/activate`);
+  return res.data;
+}
+
+export async function exportOrganization(id: string) {
+  const res = await api.post(`/superadmin/tenants/${id}/export`);
+  return res.data;
+}
+
+export async function impersonateOrganization(id: string, reason: string) {
+  const res = await api.post(`/superadmin/tenants/${id}/impersonate`, {
+    reason,
+  });
   return res.data;
 }
 

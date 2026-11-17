@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
+import { config } from "../config";
 
 export class AppError extends Error {
   constructor(
     public statusCode: number,
     public message: string,
-    public isOperational = true,
+    public isOperational = true
   ) {
     super(message);
     Object.setPrototypeOf(this, AppError.prototype);
@@ -16,13 +17,15 @@ export const errorHandler = (
   err: Error | AppError,
   _req: Request,
   res: Response,
-  _next: NextFunction,
+  _next: NextFunction
 ) => {
+  const isDev = config.app.nodeEnv === "development";
+
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,
-      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+      ...(isDev && { stack: err.stack }),
     });
   }
 
@@ -31,7 +34,7 @@ export const errorHandler = (
   return res.status(500).json({
     success: false,
     message: err.message,
-    ...(process.env.NODE_ENV === "development" && {
+    ...(isDev && {
       error: err.message,
       stack: err.stack,
     }),

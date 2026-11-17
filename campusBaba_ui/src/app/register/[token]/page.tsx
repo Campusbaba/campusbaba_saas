@@ -19,11 +19,17 @@ interface TokenPayload {
 
 function decodeToken(token: string): TokenPayload | null {
     try {
-        const std = token
+        // Support both JWT (3 parts: header.payload.signature) and base64url
+        const rawPart = token.includes(".") ? token.split(".")[1] : token;
+        const std = rawPart
             .replace(/-/g, "+")
             .replace(/_/g, "/")
-            .padEnd(token.length + (4 - (token.length % 4)) % 4, "=");
+            .padEnd(rawPart.length + (4 - (rawPart.length % 4)) % 4, "=");
         const decoded = JSON.parse(atob(std));
+        // JWT exp is in seconds; normalize to milliseconds if < 1e12
+        if (decoded.exp && decoded.exp < 1e12) {
+            decoded.exp = decoded.exp * 1000;
+        }
         return decoded as TokenPayload;
     } catch {
         return null;
@@ -87,6 +93,7 @@ export default function RegisterPage() {
         setIsLoading(true);
         try {
             await api.post("/auth/register", {
+                invitationToken: token,
                 email: payload!.email,
                 password,
                 role: payload!.role,

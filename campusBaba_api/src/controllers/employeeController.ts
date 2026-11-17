@@ -1,15 +1,32 @@
 import { Request, Response } from "express";
-import { Employee  } from "../models";
-import { nextSequence  } from "../models";
+import { Employee, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
   getPaginationParams,
   createPaginationResult,
 } from "../utils/pagination";
+import { container } from "../composition/container";
 
 export const createEmployee = asyncHandler(
   async (req: Request, res: Response) => {
+    // P0-9 Fix: Enforce maxAdmins quota
+    if (req.tenant && (req.body.status || "active") === "active") {
+      const activeEmployeesCount = await Employee.countDocuments({
+        status: "active",
+      });
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey: req.tenant.subdomain,
+          resource: "admins",
+          currentCountInDb: activeEmployeesCount,
+          limit: req.tenant.maxAdmins || 10,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
     const seq = await nextSequence("employee");
     const employeeId = `EMP-${String(seq).padStart(4, "0")}`;
     const employee = await Employee.create({ ...req.body, employeeId });
@@ -19,7 +36,7 @@ export const createEmployee = asyncHandler(
       message: "Employee created successfully",
       data: employee,
     });
-  },
+  }
 );
 
 export const getAllEmployees = asyncHandler(
@@ -53,7 +70,7 @@ export const getAllEmployees = asyncHandler(
       success: true,
       ...result,
     });
-  },
+  }
 );
 
 export const getEmployeeById = asyncHandler(
@@ -68,7 +85,7 @@ export const getEmployeeById = asyncHandler(
       success: true,
       data: employee,
     });
-  },
+  }
 );
 
 export const updateEmployee = asyncHandler(
@@ -87,7 +104,7 @@ export const updateEmployee = asyncHandler(
       message: "Employee updated successfully",
       data: employee,
     });
-  },
+  }
 );
 
 export const deleteEmployee = asyncHandler(
@@ -102,11 +119,11 @@ export const deleteEmployee = asyncHandler(
       success: true,
       message: "Employee deleted successfully",
     });
-  },
+  }
 );
 
 export const getEmployeeStats = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const stats = await Employee.aggregate([
       {
         $group: {
@@ -127,5 +144,5 @@ export const getEmployeeStats = asyncHandler(
         byStatus: stats,
       },
     });
-  },
+  }
 );
