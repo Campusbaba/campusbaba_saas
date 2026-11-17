@@ -5,7 +5,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
         <SidebarProvider>
             <AdminSidebar />
-            <SidebarInset className="flex flex-col min-w-0 bg-[--background]">
+            <SidebarInset className="flex flex-col min-w-0 bg-background">
                 {children}
             </SidebarInset>
         </SidebarProvider>

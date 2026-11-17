@@ -70,7 +70,7 @@ export default function DepartmentsPage() {
         { id: "head", header: t("teachers.designation"), accessorFn: r => { const h = r.headOfDepartment; return (typeof h === "object" && h !== null && 'firstName' in h) ? `${(h as any).firstName} ${(h as any).lastName}` : "—"; } },
         { id: "description", accessorKey: "description", header: t("common.fields.description") },
         { id: "status", header: t("common.fields.status"), accessorKey: "status", cell: ({ getValue }) => <Badge variant={String(getValue()) === "active" ? "default" : "secondary"}>{t(`common.fields.${getValue()}`, String(getValue()))}</Badge> },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -78,10 +78,10 @@ export default function DepartmentsPage() {
             <Header title="Departments" />
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("departments.allDepartments")}</h2><p className="text-sm text-[--muted-foreground]">{departments.length} {t("common.fields.total")}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("departments.allDepartments")}</h2><p className="text-sm text-muted-foreground">{departments.length} {t("common.fields.total")}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("departments.addDepartment")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={departments} columns={columns} title={t("common.pages.departments")} exportFilename="departments" />}
             </main>
             <FormDialog open={open} onClose={() => setOpen(false)} title={editing ? t("departments.editDepartment") : t("departments.addDepartment")}>

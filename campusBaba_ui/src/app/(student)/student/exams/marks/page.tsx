@@ -39,7 +39,7 @@ export default function StudentExamMarksPage() {
                 return (
                     <div className="flex flex-col">
                         <span className="font-medium">{r.marksObtained} / {total}</span>
-                        <span className="text-xs text-[--muted-foreground]">{percentage}%</span>
+                        <span className="text-xs text-muted-foreground">{percentage}%</span>
                     </div>
                 );
             }
@@ -59,7 +59,7 @@ export default function StudentExamMarksPage() {
             <Header title={t("studentPortal.examMarks.examResults")} />
             <main className="p-5 space-y-6">
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("studentPortal.examMarks.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("studentPortal.examMarks.loading")}</div>
                 ) : (
                     <DataTable data={marks} columns={columns} title={t("studentPortal.examMarks.marksTitle")} exportFilename="my-marks" />
                 )}

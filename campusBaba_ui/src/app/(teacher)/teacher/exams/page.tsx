@@ -64,7 +64,7 @@ const statusOptions = [
 export default function TeacherExamsPage() {
     const { t } = useTranslation();
     const { referenceId } = useAuth();
-    const { classRooms, loading: classRoomsLoading } = useClassRooms({}, true, referenceId);
+    const { classRooms, loading: classRoomsLoading } = useClassRooms(referenceId ? { teacherId: referenceId } : {}, true);
     const { exams, loading, fetchExamsByClassRooms, createExam, updateExam, deleteExam } = useExams({}, false);
 
     const [open, setOpen] = useState(false);
@@ -219,7 +219,7 @@ export default function TeacherExamsPage() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-[--danger]"
+                        className="text-destructive"
                         onClick={() => setConfirm(r)}
                     >
                         <Trash2 size={13} />
@@ -235,8 +235,8 @@ export default function TeacherExamsPage() {
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-base font-semibold text-[--foreground]">{t("teacherPortal.exams.myExams")}</h2>
-                        <p className="text-sm text-[--muted-foreground]">
+                        <h2 className="text-base font-semibold text-foreground">{t("teacherPortal.exams.myExams")}</h2>
+                        <p className="text-sm text-muted-foreground">
                             {t("teacherPortal.exams.examCount", { count: exams.length })}
                         </p>
                     </div>
@@ -246,11 +246,11 @@ export default function TeacherExamsPage() {
                     </Button>
                 </div>
                 {loading || classRoomsLoading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">
+                    <div className="card p-10 text-center text-muted-foreground text-sm">
                         {t("teacherPortal.exams.loading")}
                     </div>
                 ) : exams.length === 0 ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">
+                    <div className="card p-10 text-center text-muted-foreground text-sm">
                         {t("teacherPortal.exams.noExams")}
                     </div>
                 ) : (

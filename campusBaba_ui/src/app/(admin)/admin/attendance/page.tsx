@@ -202,7 +202,7 @@ export default function AttendancePage() {
             id: "today", header: t("attendance.today"),
             cell: ({ row: { original: s } }) => {
                 const st = todayAttMap[s._id];
-                if (!st) return <span className="text-xs text-[--muted-foreground]">—</span>;
+                if (!st) return <span className="text-xs text-muted-foreground">—</span>;
                 return <Badge variant={st === "present" ? "default" : "destructive"}>{t(`attendance.${st}`, st)}</Badge>;
             }
         },
@@ -308,7 +308,7 @@ export default function AttendancePage() {
                         </div>
 
                         {crLoading || studLoading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("attendance.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("attendance.loading")}</div>
                             : <DataTable data={students} columns={studentColumns} title={t("attendance.students")} exportFilename="students" />
                         }
                     </div>
@@ -344,11 +344,11 @@ export default function AttendancePage() {
                                     getItemLabel={cr => cr.name}
                                 />
                             </div>
-                            <p className="text-sm text-[--muted-foreground] pb-1">{t("attendance.records", { count: attendances.length })}</p>
+                            <p className="text-sm text-muted-foreground pb-1">{t("attendance.records", { count: attendances.length })}</p>
                         </div>
 
                         {histLoading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("attendance.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("attendance.loading")}</div>
                             : <DataTable data={attendances} columns={historyColumns} title={t("attendance.attendanceHistory")} exportFilename="attendance-history" />
                         }
                     </div>

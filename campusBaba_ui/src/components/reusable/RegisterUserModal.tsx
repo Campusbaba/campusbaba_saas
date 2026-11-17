@@ -182,14 +182,14 @@ export function RegisterUserModal({ open, onClose }: Props) {
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
             <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
                 {/* Header */}
-                <DialogHeader className="px-6 pt-5 pb-4 border-b bg-[--muted]/40">
+                <DialogHeader className="px-6 pt-5 pb-4 border-b bg-muted/40">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-[--primary]/10 flex items-center justify-center">
-                            <UserCheck size={18} className="text-[--primary]" />
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <UserCheck size={18} className="text-primary" />
                         </div>
                         <div>
                             <DialogTitle className="text-base">Register New User</DialogTitle>
-                            <p className="text-xs text-[--muted-foreground] mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 Generate a QR code for staff to self-register
                             </p>
                         </div>
@@ -197,13 +197,13 @@ export function RegisterUserModal({ open, onClose }: Props) {
 
                     {/* Step indicator */}
                     <div className="flex items-center gap-2 mt-3">
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 1 ? "text-[--primary]" : "text-[--muted-foreground]"}`}>
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 1 ? "bg-[--primary] text-white" : "bg-[--muted] text-[--muted-foreground]"}`}>1</span>
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 1 ? "text-primary" : "text-muted-foreground"}`}>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 1 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>1</span>
                             Select Person
                         </div>
-                        <ChevronRight size={12} className="text-[--muted-foreground]" />
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 2 ? "text-[--primary]" : "text-[--muted-foreground]"}`}>
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? "bg-[--primary] text-white" : "bg-[--muted] text-[--muted-foreground]"}`}>2</span>
+                        <ChevronRight size={12} className="text-muted-foreground" />
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${step === 2 ? "text-primary" : "text-muted-foreground"}`}>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>2</span>
                             Share QR Code
                         </div>
                     </div>
@@ -215,14 +215,14 @@ export function RegisterUserModal({ open, onClose }: Props) {
                         <div className="space-y-4">
                             {/* Role picker */}
                             <div>
-                                <Label className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide">Role</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     {ROLES.map((r) => (
                                         <button
                                             key={r.value}
                                             type="button"
                                             onClick={() => setRole(r.value)}
-                                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${role === r.value ? r.color + " border-current shadow-sm" : "border-[--border] text-[--muted-foreground] hover:border-[--primary]/40 hover:text-[--foreground]"}`}
+                                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${role === r.value ? r.color + " border-current shadow-sm" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"}`}
                                         >
                                             {r.label}
                                         </button>
@@ -232,7 +232,7 @@ export function RegisterUserModal({ open, onClose }: Props) {
 
                             {/* Person picker */}
                             <div>
-                                <Label className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide">Person</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Person</Label>
                                 <Select
                                     value={personId}
                                     onValueChange={(v) => {
@@ -246,7 +246,7 @@ export function RegisterUserModal({ open, onClose }: Props) {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {personOptions.length === 0 ? (
-                                            <div className="px-3 py-4 text-sm text-[--muted-foreground] text-center">
+                                            <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                                                 No {role} profiles found
                                             </div>
                                         ) : (
@@ -255,7 +255,7 @@ export function RegisterUserModal({ open, onClose }: Props) {
                                                     <div className="flex items-center gap-2">
                                                         <div>
                                                             <p className="font-medium text-sm leading-tight">{p.name}</p>
-                                                            <p className="text-xs text-[--muted-foreground]">{p.email}</p>
+                                                            <p className="text-xs text-muted-foreground">{p.email}</p>
                                                         </div>
                                                     </div>
                                                 </SelectItem>
@@ -267,10 +267,10 @@ export function RegisterUserModal({ open, onClose }: Props) {
 
                             {/* Selected person preview */}
                             {selectedPerson && (
-                                <div className="rounded-lg border border-[--border] bg-[--muted]/40 p-3 flex items-center justify-between">
+                                <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-semibold">{selectedPerson.name}</p>
-                                        <p className="text-xs text-[--muted-foreground]">{selectedPerson.email}</p>
+                                        <p className="text-xs text-muted-foreground">{selectedPerson.email}</p>
                                     </div>
                                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${selectedRole.color}`}>
                                         {selectedRole.label}
@@ -296,10 +296,10 @@ export function RegisterUserModal({ open, onClose }: Props) {
                     {step === 2 && qrDataUrl && selectedPerson && (
                         <div className="space-y-4">
                             {/* Person info */}
-                            <div className="flex items-center justify-between rounded-lg border border-[--border] bg-[--muted]/40 px-3 py-2.5">
+                            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                                 <div>
                                     <p className="text-sm font-semibold">{selectedPerson.name}</p>
-                                    <p className="text-xs text-[--muted-foreground]">{selectedPerson.email}</p>
+                                    <p className="text-xs text-muted-foreground">{selectedPerson.email}</p>
                                 </div>
                                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${selectedRole.color}`}>
                                     {selectedRole.label}
@@ -307,10 +307,10 @@ export function RegisterUserModal({ open, onClose }: Props) {
                             </div>
 
                             {/* QR Code */}
-                            <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-[--border] p-5 bg-white">
+                            <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border p-5 bg-white">
                                 <img src={qrDataUrl} alt="Registration QR Code" className="w-52 h-52" />
-                                <p className="text-xs text-center text-[--muted-foreground]">
-                                    Expires in <span className="font-semibold text-[--foreground]">24 hours</span>
+                                <p className="text-xs text-center text-muted-foreground">
+                                    Expires in <span className="font-semibold text-foreground">24 hours</span>
                                 </p>
                             </div>
 
@@ -326,7 +326,7 @@ export function RegisterUserModal({ open, onClose }: Props) {
                                 </Button>
                             </div>
 
-                            <Button variant="ghost" size="sm" className="w-full text-[--muted-foreground]" onClick={handleReset}>
+                            <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleReset}>
                                 <RefreshCw size={13} className="mr-1.5" />
                                 Generate for another person
                             </Button>

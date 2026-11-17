@@ -75,7 +75,7 @@ export default function CoursesPage() {
         { id: "credits", accessorKey: "credits", header: t("courses.credits") },
         { id: "duration", accessorKey: "duration", header: t("courses.duration") },
         { id: "status", header: t("courses.status"), accessorKey: "status", cell: ({ getValue }) => <Badge variant={String(getValue()) === "active" ? "default" : "secondary"}>{String(getValue())}</Badge> },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -83,10 +83,10 @@ export default function CoursesPage() {
             <Header title={t("common.pages.courses")} />
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("courses.allCourses")}</h2><p className="text-sm text-[--muted-foreground]">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("courses.allCourses")}</h2><p className="text-sm text-muted-foreground">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("courses.addCourse")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={courses} columns={columns} title={t("common.pages.courses")} exportFilename="courses" />}
             </main>
             <FormDialog open={open} onClose={() => setOpen(false)} title={editing ? t("courses.editCourse") : t("courses.addCourse")}>

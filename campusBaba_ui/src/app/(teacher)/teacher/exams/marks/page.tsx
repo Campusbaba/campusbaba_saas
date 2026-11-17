@@ -50,7 +50,7 @@ const statusOptions: { value: MarkRow["status"]; label: string }[] = [
 export default function TeacherExamMarksPage() {
     const { t } = useTranslation();
     const { referenceId } = useAuth();
-    const { classRooms } = useClassRooms({}, true, referenceId);
+    const { classRooms } = useClassRooms(referenceId ? { teacherId: referenceId } : {}, true);
     const { exams, fetchExamsByClassRooms } = useExams({}, false);
     const { marks, loading: marksLoading, fetchMarks, createMark, updateMark } = useExamMarks();
 
@@ -186,7 +186,7 @@ export default function TeacherExamMarksPage() {
             cell: ({ row: { original: r } }) => (
                 <div>
                     <p className="font-medium text-xs">{r.firstName} {r.lastName}</p>
-                    <p className="text-[--muted-foreground] text-xs">{r.email}</p>
+                    <p className="text-muted-foreground text-xs">{r.email}</p>
                 </div>
             ),
         },
@@ -244,7 +244,7 @@ export default function TeacherExamMarksPage() {
                             <XCircle size={13} />{t("teacherPortal.examMarks.failResult")}
                         </span>
                     )}
-                    {r.result === "" && <span className="text-[--muted-foreground] text-xs">—</span>}
+                    {r.result === "" && <span className="text-muted-foreground text-xs">—</span>}
                     {r.result === "Invalid" && (
                         <span className="flex items-center gap-1 text-amber-600 text-xs font-medium">
                             <XCircle size={13} />{t("teacherPortal.examMarks.invalidResult")}
@@ -312,7 +312,7 @@ export default function TeacherExamMarksPage() {
             <main className="p-5 space-y-5">
                 {/* Selectors */}
                 <div className="card p-5 space-y-4">
-                    <h2 className="text-sm font-semibold text-[--foreground]">{t("teacherPortal.examMarks.selectClassExam")}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("teacherPortal.examMarks.selectClassExam")}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label>{t("teacherPortal.examMarks.classroom")}</Label>
@@ -370,7 +370,7 @@ export default function TeacherExamMarksPage() {
                 {/* DataTable */}
                 {selectedClassId && selectedExamId && (
                     studentsLoading || marksLoading ? (
-                        <div className="card p-10 text-center text-sm text-[--muted-foreground]">
+                        <div className="card p-10 text-center text-sm text-muted-foreground">
                             <Loader2 size={20} className="animate-spin mx-auto mb-2" />
                             {t("teacherPortal.examMarks.loading")}
                         </div>
@@ -396,7 +396,7 @@ export default function TeacherExamMarksPage() {
 
                 {!selectedClassId && (
                     <div className="card p-12">
-                        <div className="text-center text-[--muted-foreground]">
+                        <div className="text-center text-muted-foreground">
                             <ClipboardList size={36} className="mx-auto mb-3 opacity-30" />
                             <p className="text-sm">{t("teacherPortal.examMarks.selectClassAndExam")}</p>
                         </div>

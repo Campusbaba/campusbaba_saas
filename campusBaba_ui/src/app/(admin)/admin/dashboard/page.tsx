@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RegisterUserModal } from "@/components/reusable/RegisterUserModal";
 import { useDashboard } from "@/hooks/useDashboard";
 import {
@@ -42,7 +43,7 @@ interface ScheduleRaw {
 function EmptyChart() {
     const { t } = useTranslation();
     return (
-        <div className="flex flex-col items-center justify-center h-50 text-[--muted-foreground]">
+        <div className="flex flex-col items-center justify-center h-50 text-muted-foreground">
             <TrendingUp size={32} className="mb-2 opacity-20" />
             <p className="text-sm">{t("dashboard.noData")}</p>
         </div>
@@ -73,7 +74,7 @@ function StatCard({ label, value, icon: Icon, color, bg }: {
             <CardContent>
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-[--muted-foreground]">{label}</p>
+                        <p className="text-xs text-muted-foreground">{label}</p>
                         <p className="text-2xl font-bold mt-1">{value}</p>
                     </div>
                     <span className={`h-11 w-11 rounded-xl flex items-center justify-center ${bg}`}>
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
             <main className="p-5 space-y-6">
                 {/* Top action bar */}
                 <div className="flex items-center justify-between">
-                    <p className="text-sm text-[--muted-foreground]">{t("dashboard.overview")}</p>
+                    <p className="text-sm text-muted-foreground">{t("dashboard.overview")}</p>
                     <Button size="sm" onClick={() => setRegisterOpen(true)}>
                         <UserPlus size={14} className="mr-2" />{t("dashboard.registerUser")}
                     </Button>
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
                                     <TrendingUp size={18} className="text-green-500" />
                                 </span>
                                 <div>
-                                    <p className="text-xs text-[--muted-foreground]">{t("dashboard.totalRevenue")}</p>
+                                    <p className="text-xs text-muted-foreground">{t("dashboard.totalRevenue")}</p>
                                     <p className="text-lg font-bold text-green-600">{formatCurrency(ps?.totalRevenue ?? 0)}</p>
                                 </div>
                             </div>
@@ -184,7 +185,7 @@ export default function AdminDashboard() {
                                     <CreditCard size={18} className="text-yellow-500" />
                                 </span>
                                 <div>
-                                    <p className="text-xs text-[--muted-foreground]">{t("dashboard.pendingAmount")}</p>
+                                    <p className="text-xs text-muted-foreground">{t("dashboard.pendingAmount")}</p>
                                     <p className="text-lg font-bold text-yellow-600">{formatCurrency(ps?.pendingAmount ?? 0)}</p>
                                 </div>
                             </div>
@@ -197,7 +198,7 @@ export default function AdminDashboard() {
                                     <Calendar size={18} className="text-blue-500" />
                                 </span>
                                 <div>
-                                    <p className="text-xs text-[--muted-foreground]">{t("dashboard.activeTeachers")}</p>
+                                    <p className="text-xs text-muted-foreground">{t("dashboard.activeTeachers")}</p>
                                     <p className="text-lg font-bold text-blue-600">{loading ? "—" : (overview?.activeTeachers ?? 0).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -210,7 +211,7 @@ export default function AdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t("dashboard.enrollmentTrend")}</CardTitle>
-                            <p className="text-xs text-[--muted-foreground]">{t("dashboard.enrollmentTrendSub")}</p>
+                            <p className="text-xs text-muted-foreground">{t("dashboard.enrollmentTrendSub")}</p>
                         </CardHeader>
                         <CardContent>
                             {enrollmentTrend.length === 0 ? <EmptyChart /> : (
@@ -237,7 +238,7 @@ export default function AdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t("dashboard.attendanceRate")}</CardTitle>
-                            <p className="text-xs text-[--muted-foreground]">{t("dashboard.attendanceRateSub")}</p>
+                            <p className="text-xs text-muted-foreground">{t("dashboard.attendanceRateSub")}</p>
                         </CardHeader>
                         <CardContent>
                             {attendanceTrend.length === 0 ? <EmptyChart /> : (
@@ -268,7 +269,7 @@ export default function AdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t("dashboard.statusBreakdown")}</CardTitle>
-                            <p className="text-xs text-[--muted-foreground]">{t("dashboard.statusBreakdownSub")}</p>
+                            <p className="text-xs text-muted-foreground">{t("dashboard.statusBreakdownSub")}</p>
                         </CardHeader>
                         <CardContent>
                             {studentStatusData.length === 0 ? <EmptyChart /> : (
@@ -291,7 +292,7 @@ export default function AdminDashboard() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-2.5 h-2.5 rounded-full shrink-0"
                                                         style={{ background: STATUS_COLORS[entry.statusKey] ?? PIE_COLORS[i % PIE_COLORS.length] }} />
-                                                    <span className="text-[--muted-foreground]">{entry.name}</span>
+                                                    <span className="text-muted-foreground">{entry.name}</span>
                                                 </div>
                                                 <span className="font-semibold">{entry.value.toLocaleString()}</span>
                                             </div>
@@ -306,7 +307,7 @@ export default function AdminDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t("dashboard.paymentOverview")}</CardTitle>
-                            <p className="text-xs text-[--muted-foreground]">{t("dashboard.paymentOverviewSub")}</p>
+                            <p className="text-xs text-muted-foreground">{t("dashboard.paymentOverviewSub")}</p>
                         </CardHeader>
                         <CardContent>
                             {paymentStatusData.length === 0 ? <EmptyChart /> : (
@@ -336,42 +337,40 @@ export default function AdminDashboard() {
                 <Card>
                     <CardHeader>
                         <CardTitle>{t("dashboard.todaysSchedule")}</CardTitle>
-                        <p className="text-xs text-[--muted-foreground]">{t("dashboard.todaysScheduleSub")}</p>
+                        <p className="text-xs text-muted-foreground">{t("dashboard.todaysScheduleSub")}</p>
                     </CardHeader>
                     <CardContent>
                         {schedule.length === 0
                             ? (
-                                <div className="flex flex-col items-center justify-center py-8 text-[--muted-foreground]">
+                                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                                     <Calendar size={32} className="mb-2 opacity-30" />
                                     <p className="text-sm">{t("dashboard.noClassesToday")}</p>
                                 </div>
                             )
                             : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-[--border]">
-                                                {[t("dashboard.subject"), t("dashboard.time"), t("dashboard.room"), t("dashboard.teacher")].map((h, idx) => (
-                                                    <th key={idx} className="text-left py-2 px-3 text-xs font-medium text-[--muted-foreground]">{h}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {schedule.map(s => (
-                                                <tr key={s._id} className="border-b border-[--border] last:border-0 hover:bg-[--muted]/30">
-                                                    <td className="py-2.5 px-3 font-medium">{s.subject}</td>
-                                                    <td className="py-2.5 px-3 text-[--muted-foreground]">{s.startTime} – {s.endTime}</td>
-                                                    <td className="py-2.5 px-3 text-[--muted-foreground]">
-                                                        {s.classRoomId ? `${s.classRoomId.name} (${s.classRoomId.roomNumber})` : "—"}
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-[--muted-foreground]">
-                                                        {s.teacherId ? `${s.teacherId.firstName} ${s.teacherId.lastName}` : "—"}
-                                                    </td>
-                                                </tr>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {[t("dashboard.subject"), t("dashboard.time"), t("dashboard.room"), t("dashboard.teacher")].map((h, idx) => (
+                                                <TableHead key={idx} className="text-xs font-medium text-muted-foreground">{h}</TableHead>
                                             ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {schedule.map(s => (
+                                            <TableRow key={s._id}>
+                                                <TableCell className="font-medium">{s.subject}</TableCell>
+                                                <TableCell className="text-muted-foreground">{s.startTime} – {s.endTime}</TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {s.classRoomId ? `${s.classRoomId.name} (${s.classRoomId.roomNumber})` : "—"}
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {s.teacherId ? `${s.teacherId.firstName} ${s.teacherId.lastName}` : "—"}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             )}
                     </CardContent>
                 </Card>

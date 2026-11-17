@@ -47,10 +47,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     const toggle = (id: string) => setExpandedId(prev => (prev === id ? null : id));
 
     return (
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-2 sm:gap-3 h-14 px-3 sm:px-5 bg-[--muted] backdrop-blur-md border-b border-[--border] shadow-sm overflow-hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-2 sm:gap-3 h-14 px-3 sm:px-5 bg-muted backdrop-blur-md border-b border-border shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
                 <SidebarTrigger className="-ml-1 shrink-0" />
-                <h1 className="text-sm font-semibold text-[--foreground] truncate min-w-0">{translatedTitle}</h1>
+                <h1 className="text-sm font-semibold text-foreground truncate min-w-0">{translatedTitle}</h1>
             </div>
 
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
@@ -63,7 +63,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     />
                     <button
                         onClick={() => i18n.changeLanguage("en")}
-                        className={`relative z-10 px-1.5 sm:px-2.5 h-full rounded-sm cursor-pointer transition-colors ${!currentLang.startsWith("bn") ? "text-accent" : "text-[--muted-foreground] hover:text-[--foreground]"}`}
+                        className={`relative z-10 px-1.5 sm:px-2.5 h-full rounded-sm cursor-pointer transition-colors ${!currentLang.startsWith("bn") ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
                         aria-label="Switch to English"
                         aria-pressed={!currentLang.startsWith("bn")}
                     >
@@ -71,7 +71,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     </button>
                     <button
                         onClick={() => i18n.changeLanguage("bn")}
-                        className={`relative z-10 px-1.5 sm:px-2.5 h-full rounded-sm cursor-pointer transition-colors ${currentLang.startsWith("bn") ? "text-accent" : "text-[--muted-foreground] hover:text-[--foreground]"}`}
+                        className={`relative z-10 px-1.5 sm:px-2.5 h-full rounded-sm cursor-pointer transition-colors ${currentLang.startsWith("bn") ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
                         aria-label="Switch to Bengali"
                         aria-pressed={currentLang.startsWith("bn")}
                     >
@@ -85,25 +85,25 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                         <Button variant="ghost" size="icon" className="relative">
                             <Bell size={17} />
                             {notices.length > 0 && (
-                                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[--danger]" />
+                                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
                             )}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-0" align="end">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-[--border]">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                             <span className="text-sm font-semibold">{t("header.notices")}</span>
                             {notices.length > 0 && (
                                 <Badge variant="secondary" className="text-xs">{notices.length}</Badge>
                             )}
                         </div>
 
-                        <div className="max-h-105 overflow-y-auto divide-y divide-[--border]">
+                        <div className="max-h-105 overflow-y-auto divide-y divide-border">
                             {noticesLoading ? (
-                                <div className="flex items-center justify-center py-8 gap-2 text-sm text-[--muted-foreground]">
+                                <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
                                     <Loader2 size={15} className="animate-spin" /> {t("header.loading")}
                                 </div>
                             ) : notices.length === 0 ? (
-                                <p className="py-8 text-center text-sm text-[--muted-foreground]">
+                                <p className="py-8 text-center text-sm text-muted-foreground">
                                     {t("header.noNotices")}
                                 </p>
                             ) : (
@@ -117,7 +117,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-sm font-medium text-[--foreground] truncate">
+                                                        <span className="text-sm font-medium text-foreground truncate">
                                                             {notice.title}
                                                         </span>
                                                         <Badge
@@ -127,7 +127,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                                             {notice.priority}
                                                         </Badge>
                                                     </div>
-                                                    <span className="text-xs text-[--muted-foreground] capitalize">
+                                                    <span className="text-xs text-muted-foreground capitalize">
                                                         {notice.category}
                                                         {notice.publishDate
                                                             ? ` · ${new Date(notice.publishDate).toLocaleDateString()}`
@@ -136,12 +136,12 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                                                 </div>
                                                 <ChevronDown
                                                     size={15}
-                                                    className={`shrink-0 mt-0.5 text-[--muted-foreground] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                                                    className={`shrink-0 mt-0.5 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                                                 />
                                             </button>
 
                                             {isOpen && (
-                                                <p className="mt-2 text-sm text-[--foreground] whitespace-pre-wrap leading-relaxed border-t border-[--border] pt-2">
+                                                <p className="mt-2 text-sm text-foreground whitespace-pre-wrap leading-relaxed border-t border-border pt-2">
                                                     {notice.content}
                                                 </p>
                                             )}
@@ -159,15 +159,15 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                         <button className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer">
                             {!isLoading && (
                                 <>
-                                    <div className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-[--border]">
-                                        <User size={16} className="text-[--muted-foreground]" />
+                                    <div className="sm:hidden flex items-center justify-center h-8 w-8 rounded-full bg-border">
+                                        <User size={16} className="text-muted-foreground" />
                                     </div>
                                     <div className="hidden sm:flex flex-col text-left">
-                                        <span className="text-sm font-medium text-[--foreground] leading-tight">
+                                        <span className="text-sm font-medium text-foreground leading-tight">
                                             {userName}
                                         </span>
                                         {userRole && (
-                                            <span className="text-xs text-[--muted-foreground] leading-tight">
+                                            <span className="text-xs text-muted-foreground leading-tight">
                                                 {userRole}
                                             </span>
                                         )}
@@ -178,18 +178,18 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                     </PopoverTrigger>
                     <PopoverContent className="w-56 p-2" align="end">
                         <div className="flex flex-col gap-1">
-                            <div className="px-3 py-2 border-b border-[--border]">
-                                <p className="text-sm font-medium text-[--foreground]">{userName}</p>
-                                <p className="text-xs text-[--muted-foreground]">{user?.email}</p>
+                            <div className="px-3 py-2 border-b border-border">
+                                <p className="text-sm font-medium text-foreground">{userName}</p>
+                                <p className="text-xs text-muted-foreground">{user?.email}</p>
                                 {/* {user?.referenceId && (
-                                    <p className="text-xs text-[--muted-foreground] mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                         ID: {user.referenceId}
                                     </p>
                                 )} */}
                             </div>
                             <Button
                                 variant="ghost"
-                                className="w-full justify-start text-sm gap-2 text-[--danger] hover:text-[--danger] hover:bg-[--danger]/10"
+                                className="w-full justify-start text-sm gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={handleLogout}
                             >
                                 <LogOut size={16} />

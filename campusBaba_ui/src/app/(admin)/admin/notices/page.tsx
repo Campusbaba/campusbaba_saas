@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormDialog } from "@/components/reusable/FormDialog";
 import { ConfirmDialog } from "@/components/reusable/ConfirmDialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormCombobox } from "@/components/reusable/FormCombobox";
@@ -110,12 +111,9 @@ export default function NoticesPage() {
         {
             id: "content", accessorKey: "content", header: t("notices.content"),
             cell: ({ getValue }) => (
-                <textarea
-                    readOnly
-                    rows={3}
-                    className="w-full resize-none bg-transparent text-sm leading-snug focus:outline-none"
-                    value={String(getValue())}
-                />
+                <p className="max-w-xs line-clamp-3 text-sm leading-snug text-muted-foreground">
+                    {String(getValue())}
+                </p>
             )
         },
         { id: "category", accessorKey: "category", header: t("notices.category") },
@@ -132,7 +130,7 @@ export default function NoticesPage() {
         { id: "publishDate", header: t("notices.published"), accessorFn: r => r.publishDate ? formatDate(r.publishDate) : "—" },
         { id: "expiryDate", header: t("notices.expires"), accessorFn: r => r.expiryDate ? formatDate(r.expiryDate) : "—" },
         { id: "status", header: t("notices.status"), accessorKey: "status", cell: ({ getValue }) => <Badge variant={String(getValue()) === "published" ? "default" : "secondary"}>{String(getValue())}</Badge> },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -140,10 +138,10 @@ export default function NoticesPage() {
             <Header title={t("common.pages.notices")} />
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("notices.allNotices")}</h2><p className="text-sm text-[--muted-foreground]">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("notices.allNotices")}</h2><p className="text-sm text-muted-foreground">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("notices.postNotice")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={notices} columns={columns} title={t("common.pages.notices")} exportFilename="notices" />}
             </main>
             <FormDialog open={open} onClose={() => setOpen(false)} title={editing ? t("notices.editNotice") : t("notices.postNotice")}>
@@ -209,7 +207,7 @@ export default function NoticesPage() {
                                 <Input type={field.type} value={form[field.key] as string} onChange={e => f(field.key, e.target.value)} />
                             </div>
                         ))}
-                        <div className="col-span-2"><Label>{t("notices.content")} *</Label><textarea className="flex min-h-20 w-full rounded border border-[--border] bg-[--card] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[--ring]" value={form.content} onChange={e => f("content", e.target.value)} required /></div>
+                        <div className="col-span-2 space-y-1.5"><Label>{t("notices.content")} *</Label><Textarea rows={3} value={form.content} onChange={e => f("content", e.target.value)} required /></div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button variant="outline" size="sm" type="button" onClick={() => setOpen(false)}>{t("common.operations.cancel")}</Button>

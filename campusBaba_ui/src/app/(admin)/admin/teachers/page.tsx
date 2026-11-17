@@ -135,7 +135,7 @@ export default function TeachersPage() {
             cell: ({ row: { original: r } }) => {
                 const fullName = `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim();
                 const initials = `${r.firstName?.[0] ?? ""}${r.lastName?.[0] ?? ""}`.toUpperCase() || "?";
-                return (<div className="flex items-center gap-2"><div><p className="font-medium text-sm">{fullName || "—"}</p><p className="text-xs text-[--muted-foreground]">{r.email}</p></div></div>);
+                return (<div className="flex items-center gap-2"><div><p className="font-medium text-sm">{fullName || "—"}</p><p className="text-xs text-muted-foreground">{r.email}</p></div></div>);
             }
         },
         { id: "phone", accessorKey: "phone", header: t("teachers.phone") },
@@ -145,7 +145,7 @@ export default function TeachersPage() {
         { id: "joiningDate", header: t("teachers.joined"), accessorFn: r => formatDate(r.joiningDate) },
         { id: "salary", header: t("teachers.salary"), accessorFn: r => `৳${(r.salary ?? 0).toLocaleString()}` },
         { id: "status", header: t("teachers.status"), accessorKey: "status", cell: ({ getValue }) => <Badge variant={String(getValue()) === "active" ? "default" : "secondary"}>{String(getValue())}</Badge> },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -153,10 +153,10 @@ export default function TeachersPage() {
             <Header title={t("common.pages.teachers")} />
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("teachers.allTeachers")}</h2><p className="text-sm text-[--muted-foreground]">{pagination?.totalItems ?? 0} {t("teachers.total")}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("teachers.allTeachers")}</h2><p className="text-sm text-muted-foreground">{pagination?.totalItems ?? 0} {t("teachers.total")}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("teachers.addTeacher")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={teachers} columns={columns} title={t("common.pages.teachers")} exportFilename="teachers" />}
             </main>
             <FormDialog open={open} onClose={() => setOpen(false)} title={editing ? t("teachers.editTeacher") : t("teachers.addTeacher")}>
@@ -222,7 +222,7 @@ export default function TeachersPage() {
                                 getItemLabel={dept => dept.name}
                             />
                         </div>
-                        <div className="col-span-2"><p className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide mt-2">{t("teachers.address")}</p></div>
+                        <div className="col-span-2"><p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">{t("teachers.address")}</p></div>
                         {addressFields.map(field => (
                             <div key={field.key}>
                                 <Label>{field.label}{field.required && "*"}</Label>
@@ -233,7 +233,7 @@ export default function TeachersPage() {
                                 />
                             </div>
                         ))}
-                        <div className="col-span-2"><p className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide mt-2">{t("teachers.emergencyContact")}</p></div>
+                        <div className="col-span-2"><p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">{t("teachers.emergencyContact")}</p></div>
                         {emergencyFields.map(field => (
                             <div key={field.key}>
                                 <Label>{field.label}{field.required && "*"}</Label>

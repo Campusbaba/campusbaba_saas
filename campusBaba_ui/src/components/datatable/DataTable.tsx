@@ -122,12 +122,12 @@ export function DataTable<T>({
     return (
         <div className="card p-0 overflow-hidden">
             {/* Toolbar */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-[--border]">
-                <h3 className="text-sm font-semibold text-[--foreground]">{title}</h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     {searchable && (
                         <div className="relative">
-                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[--muted-foreground]" />
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search…"
                                 value={globalFilter}
@@ -151,9 +151,9 @@ export function DataTable<T>({
             </div>
 
             {/* Mobile card view */}
-            <div className="sm:hidden divide-y divide-[--border]">
+            <div className="sm:hidden divide-y divide-border">
                 {table.getRowModel().rows.length === 0 ? (
-                    <div className="text-center py-8 text-[--muted-foreground] text-sm">No records found</div>
+                    <div className="text-center py-8 text-muted-foreground text-sm">No records found</div>
                 ) : (
                     table.getRowModel().rows.map((row) => (
                         <div key={row.id} className="p-4 space-y-2">
@@ -162,15 +162,15 @@ export function DataTable<T>({
                                 const label = typeof hdr === "string" ? hdr : cell.column.id;
                                 return (
                                     <div key={cell.id} className="flex items-start justify-between gap-3 text-sm">
-                                        <span className="font-medium text-[--muted-foreground] shrink-0 min-w-22.5">{label}</span>
-                                        <span className="text-right text-[--foreground] break-all">
+                                        <span className="font-medium text-muted-foreground shrink-0 min-w-22.5">{label}</span>
+                                        <span className="text-right text-foreground break-all">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </span>
                                     </div>
                                 );
                             })}
                             {row.getVisibleCells().filter((cell) => cell.column.id === "actions").map((cell) => (
-                                <div key={cell.id} className="pt-2 border-t border-[--border] flex justify-end">
+                                <div key={cell.id} className="pt-2 border-t border-border flex justify-end">
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </div>
                             ))}
@@ -203,7 +203,7 @@ export function DataTable<T>({
                     <tbody>
                         {table.getRowModel().rows.length === 0 ? (
                             <tr>
-                                <td colSpan={columns.length} className="text-center py-8 text-[--muted-foreground] text-sm">
+                                <td colSpan={columns.length} className="text-center py-8 text-muted-foreground text-sm">
                                     No records found
                                 </td>
                             </tr>
@@ -221,7 +221,7 @@ export function DataTable<T>({
             </div>
 
             {/* Pagination */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-[--border] text-sm text-[--muted-foreground]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                     <span>Rows per page:</span>
                     <select
@@ -233,7 +233,7 @@ export function DataTable<T>({
                             table.setPageSize(size === Infinity ? Math.max(table.getFilteredRowModel().rows.length, 1) : size);
                             table.setPageIndex(0);
                         }}
-                        className="h-7 rounded-md border border-[--border] bg-[--card] text-xs px-2 outline-none cursor-pointer"
+                        className="h-7 rounded-md border border-border bg-card text-xs px-2 outline-none cursor-pointer"
                     >
                         {[10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
                         <option value="all">All</option>

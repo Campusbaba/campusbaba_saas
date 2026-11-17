@@ -100,7 +100,7 @@ export default function ParentDashboard() {
                 {/* Child selector */}
                 {children.length > 0 && (
                     <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-[--muted-foreground]">{t("parentPortal.dashboard.viewingStatsFor")}</span>
+                        <span className="text-sm font-medium text-muted-foreground">{t("parentPortal.dashboard.viewingStatsFor")}</span>
                         <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                             <SelectTrigger className="w-56"><SelectValue placeholder={t("parentPortal.dashboard.selectChild")} /></SelectTrigger>
                             <SelectContent>
@@ -122,9 +122,9 @@ export default function ParentDashboard() {
                                         <s.icon size={18} className={s.color} />
                                     </span>
                                     <div>
-                                        <p className="text-xs text-[--muted-foreground]">{s.label}</p>
-                                        <p className="text-xl font-bold text-[--foreground] mt-0.5">{childrenLoading ? "…" : s.value}</p>
-                                        {s.sub && <p className="text-xs text-[--muted-foreground] mt-0.5 truncate">{s.sub}</p>}
+                                        <p className="text-xs text-muted-foreground">{s.label}</p>
+                                        <p className="text-xl font-bold text-foreground mt-0.5">{childrenLoading ? "…" : s.value}</p>
+                                        {s.sub && <p className="text-xs text-muted-foreground mt-0.5 truncate">{s.sub}</p>}
                                     </div>
                                 </div>
                             </CardContent>
@@ -137,21 +137,21 @@ export default function ParentDashboard() {
                     <Card>
                         <CardHeader><CardTitle>{t("parentPortal.dashboard.recentPayments")}</CardTitle></CardHeader>
                         <CardContent>
-                            {pLoading ? <p className="text-sm text-[--muted-foreground]">{t("parentPortal.dashboard.loading")}</p> : (
+                            {pLoading ? <p className="text-sm text-muted-foreground">{t("parentPortal.dashboard.loading")}</p> : (
                                 <div className="space-y-2">
                                     {payments.slice(0, 5).map((p, i) => (
-                                        <div key={i} className="flex items-center justify-between py-2 border-b border-[--border] last:border-0">
+                                        <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                                             <div>
-                                                <p className="text-sm text-[--foreground]">{p.paymentType}</p>
-                                                <p className="text-xs text-[--muted-foreground]">{formatDate(p.dueDate)}</p>
+                                                <p className="text-sm text-foreground">{p.paymentType}</p>
+                                                <p className="text-xs text-muted-foreground">{formatDate(p.dueDate)}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-semibold text-[--success]">{formatCurrency(p.amount)}</span>
+                                                <span className="text-sm font-semibold text-[var(--success)]">{formatCurrency(p.amount)}</span>
                                                 <Badge variant={p.paymentStatus === "paid" ? "default" : "secondary"}>{p.paymentStatus}</Badge>
                                             </div>
                                         </div>
                                     ))}
-                                    {payments.length === 0 && <p className="text-sm text-[--muted-foreground]">{t("parentPortal.dashboard.noPaymentsFound")}</p>}
+                                    {payments.length === 0 && <p className="text-sm text-muted-foreground">{t("parentPortal.dashboard.noPaymentsFound")}</p>}
                                 </div>
                             )}
                         </CardContent>
@@ -161,7 +161,7 @@ export default function ParentDashboard() {
                         <CardHeader><CardTitle>{t("parentPortal.dashboard.monthlyAttendance")}</CardTitle></CardHeader>
                         <CardContent>
                             {aLoading ? (
-                                <p className="text-sm text-[--muted-foreground]">{t("parentPortal.dashboard.loading")}</p>
+                                <p className="text-sm text-muted-foreground">{t("parentPortal.dashboard.loading")}</p>
                             ) : (
                                 <ResponsiveContainer width="100%" height={220}>
                                     <LineChart data={monthlyChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>

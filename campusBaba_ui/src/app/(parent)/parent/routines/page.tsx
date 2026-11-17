@@ -62,7 +62,7 @@ export default function ParentRoutinesPage() {
             <main className="p-5 space-y-4">
                 {children.length > 1 && (
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-[--muted-foreground]">{t("parentPortal.routines.child")}</span>
+                        <span className="text-sm text-muted-foreground">{t("parentPortal.routines.child")}</span>
                         <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                             <SelectTrigger className="w-52"><SelectValue placeholder={t("parentPortal.routines.selectChild")} /></SelectTrigger>
                             <SelectContent>
@@ -73,11 +73,11 @@ export default function ParentRoutinesPage() {
                         </Select>
                     </div>
                 )}
-                <h2 className="text-base font-semibold text-[--foreground]">
+                <h2 className="text-base font-semibold text-foreground">
                     {t("parentPortal.routines.classSchedule")}{selectedStudent ? ` — ${selectedStudent.firstName} ${selectedStudent.lastName}` : ""}
                 </h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("parentPortal.routines.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("parentPortal.routines.loading")}</div>
                 ) : (
                     <DataTable data={routines} columns={columns} title="Routines" exportFilename="parent-routines" />
                 )}

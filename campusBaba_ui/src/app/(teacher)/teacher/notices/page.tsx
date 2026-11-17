@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormDialog } from "@/components/reusable/FormDialog";
 import { ConfirmDialog } from "@/components/reusable/ConfirmDialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormCombobox } from "@/components/reusable/FormCombobox";
@@ -158,12 +159,9 @@ export default function TeacherNoticesPage() {
         {
             id: "content", accessorKey: "content", header: t("teacherPortal.notices.contentHeader"),
             cell: ({ getValue }) => (
-                <textarea
-                    readOnly
-                    rows={3}
-                    className="w-full resize-none bg-transparent text-sm leading-snug focus:outline-none"
-                    value={String(getValue())}
-                />
+                <p className="max-w-xs line-clamp-3 text-sm leading-snug text-muted-foreground">
+                    {String(getValue())}
+                </p>
             ),
         },
         { id: "category", accessorKey: "category", header: t("teacherPortal.notices.categoryHeader") },
@@ -224,7 +222,7 @@ export default function TeacherNoticesPage() {
                     </Button>
                     <Button
                         variant="ghost" size="icon"
-                        className="text-[--danger]"
+                        className="text-destructive"
                         onClick={() => setConfirm(r)}
                     >
                         <Trash2 size={13} />
@@ -241,7 +239,7 @@ export default function TeacherNoticesPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-base font-semibold">{t("teacherPortal.notices.title")}</h2>
-                        <p className="text-sm text-[--muted-foreground]">
+                        <p className="text-sm text-muted-foreground">
                             {t("teacherPortal.notices.total", { count: pagination?.totalItems ?? notices.length })}
                         </p>
                     </div>
@@ -252,7 +250,7 @@ export default function TeacherNoticesPage() {
                 </div>
 
                 {loading
-                    ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("teacherPortal.notices.loading")}</div>
+                    ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("teacherPortal.notices.loading")}</div>
                     : <DataTable data={notices} columns={columns} title={t("teacherPortal.notices.notices")} exportFilename="teacher-notices" />
                 }
             </main>
@@ -350,10 +348,10 @@ export default function TeacherNoticesPage() {
                             />
                         </div>
 
-                        <div className="col-span-2">
+                        <div className="col-span-2 space-y-1.5">
                             <Label>{t("teacherPortal.notices.contentLabel")}</Label>
-                            <textarea
-                                className="flex min-h-24 w-full rounded border border-[--border] bg-[--card] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[--ring]"
+                            <Textarea
+                                rows={4}
                                 value={form.content}
                                 onChange={e => f("content", e.target.value)}
                                 required

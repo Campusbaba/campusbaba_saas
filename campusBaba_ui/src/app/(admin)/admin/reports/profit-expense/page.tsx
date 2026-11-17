@@ -13,6 +13,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -66,17 +67,18 @@ export default function ProfitExpensePage() {
                     <ArrowLeft size={16} />
                 </Button>
                 <div>
-                    <h1 className="text-xl font-bold text-[--foreground]">{t("reports.profitExpenseReportTitle")}</h1>
-                    <p className="text-xs text-[--muted-foreground]">{t("reports.annualComparison")}</p>
+                    <h1 className="text-xl font-bold text-foreground">{t("reports.profitExpenseReportTitle")}</h1>
+                    <p className="text-xs text-muted-foreground">{t("reports.annualComparison")}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <select
-                        value={year}
-                        onChange={e => setYear(Number(e.target.value))}
-                        className="input text-sm h-9 w-28"
-                    >
-                        {years.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                    <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+                        <SelectTrigger className="w-28 h-9">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 

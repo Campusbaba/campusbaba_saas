@@ -31,11 +31,11 @@ export default function StudentAttendancePage() {
         <>
             <Header title={t("studentPortal.attendance.myAttendance")} />
             <main className="p-5 space-y-4">
-                <h2 className="text-base font-semibold text-[--foreground]">
+                <h2 className="text-base font-semibold text-foreground">
                     {t("studentPortal.attendance.attendanceRecords")}
                 </h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("studentPortal.attendance.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("studentPortal.attendance.loading")}</div>
                 ) : (
                     <DataTable data={attendances} columns={columns} title={t("studentPortal.attendance.attendance")} exportFilename="my-attendance" />
                 )}

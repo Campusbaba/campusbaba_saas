@@ -121,12 +121,12 @@ export default function RoutinesPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-base font-semibold">{t("routines.classRoutines")}</h2>
-                        <p className="text-sm text-[--muted-foreground]">{routines.length} {t("routines.entries")}</p>
+                        <p className="text-sm text-muted-foreground">{routines.length} {t("routines.entries")}</p>
                     </div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("routines.addRoutine")}</Button>
                 </div>
                 {loading
-                    ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                    ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={routines} columns={columns} title={t("common.pages.routines")} exportFilename="routines" />
                 }
             </main>

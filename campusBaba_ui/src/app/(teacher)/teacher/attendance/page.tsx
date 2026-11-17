@@ -33,7 +33,7 @@ export default function TeacherAttendancePage() {
     const { referenceId, user } = useAuth();
     const { attendances, loading: histLoading, fetchAttendances, createAttendance, fetchTodayAttendance: fetchTodayAtt } = useAttendance({}, false);
     const { students, fetchStudents, loading: studLoading } = useStudents({}, false);
-    const { classRooms: assignedClassRooms } = useClassRooms({}, true, referenceId ?? undefined);
+    const { classRooms: assignedClassRooms } = useClassRooms(referenceId ? { teacherId: referenceId } : {}, true);
 
     const [activeTab, setActiveTab] = useState<"mark" | "history">("mark");
     const [selectedClassRoomId, setSelectedClassRoomId] = useState<string>("");
@@ -144,7 +144,7 @@ export default function TeacherAttendancePage() {
             id: "today", header: t("attendance.today"),
             cell: ({ row: { original: s } }) => {
                 const st = todayAttMap[s._id];
-                if (!st) return <span className="text-xs text-[--muted-foreground]">—</span>;
+                if (!st) return <span className="text-xs text-muted-foreground">—</span>;
                 return <Badge variant={st === "present" ? "default" : "destructive"}>{t(`attendance.${st}`)}</Badge>;
             }
         },
@@ -208,7 +208,7 @@ export default function TeacherAttendancePage() {
                             </div>
                         </div>
                         {studLoading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("header.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("header.loading")}</div>
                             : <DataTable data={students} columns={studentColumns} title={t("attendance.students")} exportFilename="students" />}
                     </div>
                 )}
@@ -234,10 +234,10 @@ export default function TeacherAttendancePage() {
                                     {historyDate && <Button variant="ghost" size="sm" onClick={() => setHistoryDate("")}>{t("attendance.clear")}</Button>}
                                 </div>
                             </div>
-                            <p className="text-sm text-[--muted-foreground] pb-1">{t("attendance.records", { count: attendances.length })}</p>
+                            <p className="text-sm text-muted-foreground pb-1">{t("attendance.records", { count: attendances.length })}</p>
                         </div>
                         {histLoading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("header.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("header.loading")}</div>
                             : <DataTable data={attendances} columns={historyColumns} title={t("attendance.attendanceHistory")} exportFilename="teacher-attendance-history" />}
                     </div>
                 )}

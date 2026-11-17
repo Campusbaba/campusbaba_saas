@@ -37,11 +37,11 @@ export default function StudentExamsPage() {
             <Header title={t("studentPortal.exams.examSchedule")} />
             <main className="p-5 space-y-6">
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("studentPortal.exams.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("studentPortal.exams.loading")}</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {exams.length > 0 ? exams.map((exam) => (
-                            <Card key={exam._id} className="border-l-4 border-l-[--primary]">
+                            <Card key={exam._id} className="border-l-4 border-l-primary">
                                 <CardHeader className="pb-2">
                                     <div className="flex justify-between items-start">
                                         <CardTitle className="text-lg font-semibold">{exam.name}</CardTitle>
@@ -49,27 +49,27 @@ export default function StudentExamsPage() {
                                             {exam.status}
                                         </Badge>
                                     </div>
-                                    <p className="text-sm text-[--muted-foreground] uppercase tracking-wide text-xs font-semibold">
+                                    <p className="text-sm text-muted-foreground uppercase tracking-wide text-xs font-semibold">
                                         {(exam.courseId as { name?: string })?.name ?? t("studentPortal.exams.course")}
                                     </p>
                                 </CardHeader>
                                 <CardContent className="space-y-4 pt-2">
-                                    <div className="flex items-center gap-2 text-sm text-[--muted-foreground]">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <Calendar size={16} />
                                         <span>{formatDate(exam.date)}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-[--muted-foreground]">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <Clock size={16} />
                                         <span>{exam.startTime} - {exam.endTime}</span>
                                     </div>
-                                    <div className="pt-2 border-t border-[--border] mt-2 flex justify-between text-sm">
+                                    <div className="pt-2 border-t border-border mt-2 flex justify-between text-sm">
                                         <span>{t("studentPortal.exams.totalMarks")}</span>
                                         <span className="font-semibold">{exam.totalMarks}</span>
                                     </div>
                                 </CardContent>
                             </Card>
                         )) : (
-                            <div className="col-span-full py-10 text-center text-[--muted-foreground]">
+                            <div className="col-span-full py-10 text-center text-muted-foreground">
                                 {t("studentPortal.exams.noExams")}
                             </div>
                         )}

@@ -6,6 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useGovernance } from "@/hooks/useGovernance";
 import {
   ShieldCheck,
@@ -238,7 +241,7 @@ export default function AdminGovernanceSettingsPage() {
     <>
       <Header title="Access, Security & Module Control Center" />
       <main className="p-5 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-[--border] bg-[--card]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card">
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
               <ShieldCheck size={22} />
@@ -252,7 +255,7 @@ export default function AdminGovernanceSettingsPage() {
                   Tenant: {config?.tenantId || "Current"}
                 </Badge>
               </div>
-              <p className="text-xs text-[--muted-foreground] mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Control every role permission, campus module, 5.00 GPA rule,
                 QR registration lock, and payment/SMS gateway from one place—no
                 code changes or server restarts required.
@@ -309,7 +312,7 @@ export default function AdminGovernanceSettingsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Dynamic Role-Based Access Control (RBAC)</CardTitle>
-                <p className="text-xs text-[--muted-foreground] mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Select a role below and check/uncheck permissions. Every API
                   endpoint enforces this matrix in real time.
                 </p>
@@ -320,7 +323,7 @@ export default function AdminGovernanceSettingsPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="flex flex-wrap gap-2 pb-3 border-b border-[--border]">
+              <div className="flex flex-wrap gap-2 pb-3 border-b border-border">
                 {ROLE_LIST.map((r) => {
                   const count = (roleMatrix[r.key] || []).length;
                   const active = selectedRole === r.key;
@@ -332,7 +335,7 @@ export default function AdminGovernanceSettingsPage() {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-2 ${
                         active
                           ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-[--muted]/40 hover:bg-[--muted] border-[--border]"
+                          : "bg-muted/40 hover:bg-muted border-border"
                       }`}
                     >
                       <span>{r.label}</span>
@@ -361,23 +364,22 @@ export default function AdminGovernanceSettingsPage() {
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         checked
                           ? "border-blue-500/50 bg-blue-500/5"
-                          : "border-[--border] hover:bg-[--muted]/30"
+                          : "border-border hover:bg-muted/30"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600"
+                      <Checkbox
+                        className="mt-1"
                         checked={checked}
-                        onChange={() =>
+                        onCheckedChange={() =>
                           togglePermission(selectedRole, perm.code)
                         }
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold">{perm.label}</p>
-                        <p className="text-[11px] font-mono text-[--muted-foreground]">
+                        <p className="text-[11px] font-mono text-muted-foreground">
                           {perm.code}
                         </p>
-                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-[--muted] text-[--muted-foreground]">
+                        <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                           {perm.group}
                         </span>
                       </div>
@@ -396,7 +398,7 @@ export default function AdminGovernanceSettingsPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Campus Modules & Feature Flags</CardTitle>
-                  <p className="text-xs text-[--muted-foreground] mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Enable or disable modules for your institution. Disabled
                     modules are automatically hidden from navigation and blocked
                     at the API layer.
@@ -420,7 +422,7 @@ export default function AdminGovernanceSettingsPage() {
                       className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border cursor-pointer ${
                         enabled
                           ? "border-blue-500/40 bg-blue-500/5"
-                          : "border-[--border] opacity-75"
+                          : "border-border opacity-75"
                       }`}
                     >
                       <div className="space-y-1">
@@ -435,18 +437,17 @@ export default function AdminGovernanceSettingsPage() {
                             {enabled ? "Active" : "Disabled"}
                           </Badge>
                         </div>
-                        <p className="text-xs text-[--muted-foreground]">
+                        <p className="text-xs text-muted-foreground">
                           {f.desc}
                         </p>
                       </div>
-                      <input
-                        type="checkbox"
-                        className="mt-1 h-4 w-4"
+                      <Checkbox
+                        className="mt-1"
                         checked={enabled}
-                        onChange={(e) =>
+                        onCheckedChange={(val) =>
                           setFeatureFlags({
                             ...featureFlags,
-                            [f.key]: e.target.checked,
+                            [f.key]: Boolean(val),
                           })
                         }
                       />
@@ -465,69 +466,66 @@ export default function AdminGovernanceSettingsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-[--border] cursor-pointer">
+                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border cursor-pointer">
                     <div>
                       <p className="text-xs font-semibold">
                         Allow Signed QR Onboarding
                       </p>
-                      <p className="text-[11px] text-[--muted-foreground]">
+                      <p className="text-[11px] text-muted-foreground">
                         Allow students & teachers with a single-use signed QR
                         token to self-register.
                       </p>
                     </div>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={securitySettings.allowQrSelfRegistration}
-                      onChange={(e) =>
+                      onCheckedChange={(val) =>
                         setSecuritySettings({
                           ...securitySettings,
-                          allowQrSelfRegistration: e.target.checked,
+                          allowQrSelfRegistration: Boolean(val),
                         })
                       }
                     />
                   </label>
 
-                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-[--border] cursor-pointer">
+                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border cursor-pointer">
                     <div>
                       <p className="text-xs font-semibold">
                         Require Accountant TrxID Verification
                       </p>
-                      <p className="text-[11px] text-[--muted-foreground]">
+                      <p className="text-[11px] text-muted-foreground">
                         Manual bKash/Nagad Send-Money TrxID submissions must be
                         approved by an Accountant before marking paid.
                       </p>
                     </div>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={
                         securitySettings.requireAccountantTrxVerification
                       }
-                      onChange={(e) =>
+                      onCheckedChange={(val) =>
                         setSecuritySettings({
                           ...securitySettings,
-                          requireAccountantTrxVerification: e.target.checked,
+                          requireAccountantTrxVerification: Boolean(val),
                         })
                       }
                     />
                   </label>
 
-                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-[--border] cursor-pointer">
+                  <label className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border cursor-pointer">
                     <div>
                       <p className="text-xs font-semibold">
                         Auto-Activate Student on Tuition Payment
                       </p>
-                      <p className="text-[11px] text-[--muted-foreground]">
+                      <p className="text-[11px] text-muted-foreground">
                         Automatically transition student status to Active once
                         admission/tuition invoice is paid.
                       </p>
                     </div>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={securitySettings.autoActivateStudentOnPayment}
-                      onChange={(e) =>
+                      onCheckedChange={(val) =>
                         setSecuritySettings({
                           ...securitySettings,
-                          autoActivateStudentOnPayment: e.target.checked,
+                          autoActivateStudentOnPayment: Boolean(val),
                         })
                       }
                     />
@@ -546,7 +544,7 @@ export default function AdminGovernanceSettingsPage() {
                 <CardTitle>
                   Bangladesh NCTB 5.00 GPA & 4th-Subject Grading Configurator
                 </CardTitle>
-                <p className="text-xs text-[--muted-foreground] mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Customize how term GPA, 4th-subject bonus points, and
                   mandatory subject failures are calculated for your marksheets.
                 </p>
@@ -558,29 +556,28 @@ export default function AdminGovernanceSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <label className="flex items-start justify-between gap-3 p-3.5 rounded-xl border border-[--border]">
+                <label className="flex items-start justify-between gap-3 p-3.5 rounded-xl border border-border">
                   <div>
                     <p className="text-xs font-semibold">
                       Enable 4th-Subject Bonus
                     </p>
-                    <p className="text-[11px] text-[--muted-foreground] mt-0.5">
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
                       Add `(4th Subject GP - Deduction)` to total grade points
                       before dividing by mandatory subject count.
                     </p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={gradingScheme.enableFourthSubjectBonus}
-                    onChange={(e) =>
+                    onCheckedChange={(val) =>
                       setGradingScheme({
                         ...gradingScheme,
-                        enableFourthSubjectBonus: e.target.checked,
+                        enableFourthSubjectBonus: Boolean(val),
                       })
                     }
                   />
                 </label>
 
-                <div className="p-3.5 rounded-xl border border-[--border]">
+                <div className="p-3.5 rounded-xl border border-border">
                   <label className="text-xs font-semibold block mb-1">
                     4th-Subject Deduction Constant (Default: 2.00)
                   </label>
@@ -599,52 +596,51 @@ export default function AdminGovernanceSettingsPage() {
                   />
                 </div>
 
-                <label className="flex items-start justify-between gap-3 p-3.5 rounded-xl border border-[--border]">
+                <label className="flex items-start justify-between gap-3 p-3.5 rounded-xl border border-border">
                   <div>
                     <p className="text-xs font-semibold">
                       Fail Term if Any Mandatory Subject is Failed (F)
                     </p>
-                    <p className="text-[11px] text-[--muted-foreground] mt-0.5">
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
                       If a student scores below 33% (0.00 GP) in any mandatory
                       subject, final GPA is 0.00 (F).
                     </p>
                   </div>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={gradingScheme.failIfAnyMandatoryFailed}
-                    onChange={(e) =>
+                    onCheckedChange={(val) =>
                       setGradingScheme({
                         ...gradingScheme,
-                        failIfAnyMandatoryFailed: e.target.checked,
+                        failIfAnyMandatoryFailed: Boolean(val),
                       })
                     }
                   />
                 </label>
               </div>
 
-              <div className="overflow-x-auto pt-2">
-                <table className="w-full text-xs border border-[--border] rounded-lg">
-                  <thead className="bg-[--muted]/50">
-                    <tr>
-                      <th className="p-2.5 text-left">Marks Range (%)</th>
-                      <th className="p-2.5 text-left">Letter Grade</th>
-                      <th className="p-2.5 text-left">Grade Point (GP)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table className="text-xs">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="h-9">Marks Range (%)</TableHead>
+                      <TableHead className="h-9">Letter Grade</TableHead>
+                      <TableHead className="h-9">Grade Point (GP)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {(config?.gradingScheme.gradeBands || []).map((b, idx) => (
-                      <tr key={idx} className="border-t border-[--border]">
-                        <td className="p-2.5 font-mono">
+                      <TableRow key={idx}>
+                        <TableCell className="py-2.5 font-mono">
                           {b.minPercentage}% – {b.maxPercentage}%
-                        </td>
-                        <td className="p-2.5 font-bold">{b.letterGrade}</td>
-                        <td className="p-2.5 font-mono">
+                        </TableCell>
+                        <TableCell className="py-2.5 font-bold">{b.letterGrade}</TableCell>
+                        <TableCell className="py-2.5 font-mono">
                           {b.gradePoint.toFixed(2)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -658,7 +654,7 @@ export default function AdminGovernanceSettingsPage() {
                 <Sparkles size={16} className="text-blue-600" />
                 Configure Gateway Credentials (AES-256-GCM Encrypted)
               </CardTitle>
-              <p className="text-xs text-[--muted-foreground]">
+              <p className="text-xs text-muted-foreground">
                 Store your institution&apos;s own bKash, Nagad, SSLCommerz, or
                 BulkSMSBD credentials. Secrets are encrypted at rest via
                 AES-256-GCM and never exposed in plain text after saving.
@@ -670,11 +666,10 @@ export default function AdminGovernanceSettingsPage() {
                   <label className="text-xs font-medium block mb-1">
                     Gateway Capability
                   </label>
-                  <select
-                    className="w-full h-9 rounded-md border border-[--border] bg-transparent px-3 text-xs"
+                  <Select
                     value={credForm.capability}
-                    onChange={(e) => {
-                      const cap = e.target.value as "payment" | "sms";
+                    onValueChange={(val) => {
+                      const cap = val as "payment" | "sms";
                       setCredForm({
                         ...credForm,
                         capability: cap,
@@ -683,43 +678,50 @@ export default function AdminGovernanceSettingsPage() {
                       });
                     }}
                   >
-                    <option value="payment">Payment Gateway</option>
-                    <option value="sms">SMS Gateway (BTRC)</option>
-                  </select>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="payment">Payment Gateway</SelectItem>
+                      <SelectItem value="sms">SMS Gateway (BTRC)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="text-xs font-medium block mb-1">
                     Provider
                   </label>
-                  <select
-                    className="w-full h-9 rounded-md border border-[--border] bg-transparent px-3 text-xs"
+                  <Select
                     value={credForm.providerCode}
-                    onChange={(e) =>
+                    onValueChange={(val) =>
                       setCredForm({
                         ...credForm,
-                        providerCode: e.target.value,
+                        providerCode: val,
                       })
                     }
                   >
-                    {credForm.capability === "payment" ? (
-                      <>
-                        <option value="bkash">bKash Tokenized Checkout</option>
-                        <option value="nagad">Nagad Merchant PGW</option>
-                        <option value="sslcommerz">SSLCommerz</option>
-                        <option value="aamarpay">aamarPay</option>
-                        <option value="manual">
-                          Manual MFS Send-Money (TrxID)
-                        </option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="bulksmsbd">BulkSMSBD</option>
-                        <option value="alpha">Alpha SMS BD</option>
-                        <option value="ssl_wireless">SSL Wireless</option>
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {credForm.capability === "payment" ? (
+                        <>
+                          <SelectItem value="bkash">bKash Tokenized Checkout</SelectItem>
+                          <SelectItem value="nagad">Nagad Merchant PGW</SelectItem>
+                          <SelectItem value="sslcommerz">SSLCommerz</SelectItem>
+                          <SelectItem value="aamarpay">aamarPay</SelectItem>
+                          <SelectItem value="manual">Manual MFS Send-Money (TrxID)</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="bulksmsbd">BulkSMSBD</SelectItem>
+                          <SelectItem value="alpha">Alpha SMS BD</SelectItem>
+                          <SelectItem value="ssl_wireless">SSL Wireless</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

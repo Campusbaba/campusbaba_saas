@@ -77,7 +77,7 @@ export default function ParentExamMarksPage() {
             <main className="p-5 space-y-4">
                 {children.length > 1 && (
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-[--muted-foreground]">{t("parentPortal.examMarks.child")}</span>
+                        <span className="text-sm text-muted-foreground">{t("parentPortal.examMarks.child")}</span>
                         <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                             <SelectTrigger className="w-52"><SelectValue placeholder={t("parentPortal.examMarks.selectChild")} /></SelectTrigger>
                             <SelectContent>
@@ -88,11 +88,11 @@ export default function ParentExamMarksPage() {
                         </Select>
                     </div>
                 )}
-                <h2 className="text-base font-semibold text-[--foreground]">
+                <h2 className="text-base font-semibold text-foreground">
                     {t("parentPortal.examMarks.examResults")}{selectedStudent ? ` — ${selectedStudent.firstName} ${selectedStudent.lastName}` : ""}
                 </h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("parentPortal.examMarks.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("parentPortal.examMarks.loading")}</div>
                 ) : (
                     <DataTable data={marks} columns={columns} title="Exam Marks" exportFilename="parent-exam-marks" />
                 )}

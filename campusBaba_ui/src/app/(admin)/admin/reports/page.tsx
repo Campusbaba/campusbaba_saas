@@ -46,8 +46,8 @@ export default function ReportsPage() {
     return (
         <div className="p-6 space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-[--foreground]">{t("reports.allReports")}</h1>
-                <p className="text-sm text-[--muted-foreground] mt-1">
+                <h1 className="text-2xl font-bold text-foreground">{t("reports.allReports")}</h1>
+                <p className="text-sm text-muted-foreground mt-1">
                     {t("reports.viewAnalytics")}
                 </p>
             </div>
@@ -57,14 +57,14 @@ export default function ReportsPage() {
                     <button
                         key={card.href}
                         onClick={() => router.push(card.href)}
-                        className="card p-5 text-left hover:border-[--primary]/40 hover:shadow-lg transition-all duration-200 group cursor-pointer"
+                        className="card p-5 text-left hover:border-primary/40 hover:shadow-lg transition-all duration-200 group cursor-pointer"
                     >
                         <div className={`inline-flex items-center justify-center h-11 w-11 rounded-xl ${card.bg} mb-4`}>
                             <card.icon className={`h-5 w-5 ${card.color}`} />
                         </div>
-                        <h3 className="font-semibold text-[--foreground] text-sm mb-1">{card.title}</h3>
-                        <p className="text-xs text-[--muted-foreground] leading-relaxed">{card.description}</p>
-                        <div className="flex items-center gap-1 mt-4 text-xs text-[--primary] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                        <h3 className="font-semibold text-foreground text-sm mb-1">{card.title}</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
+                        <div className="flex items-center gap-1 mt-4 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                             {t("reports.viewReport")} <ArrowRight size={12} />
                         </div>
                     </button>

@@ -61,7 +61,7 @@ export default function ExamMarksPage() {
                 grade === "C" ? "bg-amber-50 text-amber-700" :
                     grade === "D" ? "bg-orange-50 text-orange-700" :
                         grade === "F" ? "bg-rose-50 text-rose-700" :
-                            "bg-[--muted] text-[--muted-foreground]"
+                            "bg-muted text-muted-foreground"
             }`}>{grade || "—"}</span>
     );
 
@@ -197,7 +197,7 @@ export default function ExamMarksPage() {
             cell: ({ row: { original: r } }) => (
                 <div>
                     <p className="font-medium text-xs">{r.firstName} {r.lastName}</p>
-                    <p className="text-[--muted-foreground] text-xs">{r.email}</p>
+                    <p className="text-muted-foreground text-xs">{r.email}</p>
                 </div>
             ),
         },
@@ -259,7 +259,7 @@ export default function ExamMarksPage() {
                             <XCircle size={13} />{t("exams.fail")}
                         </span>
                     )}
-                    {r.result === "" && <span className="text-[--muted-foreground] text-xs">—</span>}
+                    {r.result === "" && <span className="text-muted-foreground text-xs">—</span>}
                     {r.saved && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t("exams.saved")}</Badge>}
                 </div>
             ),
@@ -324,7 +324,7 @@ export default function ExamMarksPage() {
             <main className="p-5 space-y-5">
                 {/* Selectors */}
                 <div className="card p-5 space-y-4">
-                    <h2 className="text-sm font-semibold text-[--foreground]">{t("exams.selectClassroomAndExam")}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t("exams.selectClassroomAndExam")}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label>{t("exams.classroom")}</Label>
@@ -382,7 +382,7 @@ export default function ExamMarksPage() {
                 {/* DataTable */}
                 {selectedClassId && selectedExamId && (
                     studentsLoading || marksLoading ? (
-                        <div className="card p-10 text-center text-sm text-[--muted-foreground]">
+                        <div className="card p-10 text-center text-sm text-muted-foreground">
                             <Loader2 size={20} className="animate-spin mx-auto mb-2" />
                             {t("common.operations.loading")}
                         </div>
@@ -408,7 +408,7 @@ export default function ExamMarksPage() {
 
                 {!selectedClassId && (
                     <div className="card p-12">
-                        <div className="text-center text-[--muted-foreground]">
+                        <div className="text-center text-muted-foreground">
                             <ClipboardList size={36} className="mx-auto mb-3 opacity-30" />
                             <p className="text-sm">{t("exams.selectClassAndExam")}</p>
                         </div>

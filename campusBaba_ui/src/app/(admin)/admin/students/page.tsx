@@ -128,7 +128,7 @@ export default function StudentsPage() {
         },
         {
             id: "name", header: t("common.fields.student"), accessorFn: r => `${r.firstName} ${r.lastName}`,
-            cell: ({ row: { original: r } }) => (<div className="flex items-center gap-2"><div><p className="font-medium text-sm">{r.firstName} {r.lastName}</p><p className="text-xs text-[--muted-foreground]">{r.email}</p></div></div>)
+            cell: ({ row: { original: r } }) => (<div className="flex items-center gap-2"><div><p className="font-medium text-sm">{r.firstName} {r.lastName}</p><p className="text-xs text-muted-foreground">{r.email}</p></div></div>)
         },
         { id: "email", accessorKey: "email", header: t("students.email") },
         { id: "phone", accessorKey: "phone", header: t("students.phone") },
@@ -140,8 +140,8 @@ export default function StudentsPage() {
             cell: ({ row: { original: r } }) => r.address ? (
                 <div className="text-xs">
                     <p>{r.address.street}</p>
-                    <p className="text-[--muted-foreground]">{r.address.city}, {r.address.state} {r.address.zipCode}</p>
-                    <p className="text-[--muted-foreground]">{r.address.country}</p>
+                    <p className="text-muted-foreground">{r.address.city}, {r.address.state} {r.address.zipCode}</p>
+                    <p className="text-muted-foreground">{r.address.country}</p>
                 </div>
             ) : "—"
         },
@@ -151,8 +151,8 @@ export default function StudentsPage() {
             cell: ({ row: { original: r } }) => r.emergencyContact ? (
                 <div className="text-xs">
                     <p>{r.emergencyContact.name}</p>
-                    <p className="text-[--muted-foreground]">{r.emergencyContact.relationship}</p>
-                    <p className="text-[--muted-foreground]">{r.emergencyContact.phone}</p>
+                    <p className="text-muted-foreground">{r.emergencyContact.relationship}</p>
+                    <p className="text-muted-foreground">{r.emergencyContact.phone}</p>
                 </div>
             ) : "—"
         },
@@ -165,7 +165,7 @@ export default function StudentsPage() {
         },
         { id: "enrollmentDate", header: t("students.enrolled"), accessorFn: r => formatDate(r.enrollmentDate) },
         { id: "status", header: t("students.status"), accessorKey: "status", cell: ({ getValue }) => <Badge variant={String(getValue()) === "active" ? "default" : "secondary"}>{String(getValue())}</Badge> },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -173,10 +173,10 @@ export default function StudentsPage() {
             <Header title={t("common.pages.students")} />
             <main className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("students.allStudents")}</h2><p className="text-sm text-[--muted-foreground]">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("students.allStudents")}</h2><p className="text-sm text-muted-foreground">{pagination?.totalItems ?? 0} {t("common.fields.total")}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("students.addStudent")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={students} columns={columns} title={t("common.pages.students")} exportFilename="students" />}
             </main>
             <FormDialog open={open} onClose={() => setOpen(false)} title={editing ? t("students.editStudent") : t("students.addStudent")}>
@@ -207,7 +207,7 @@ export default function StudentsPage() {
                             />
                         </div>
                         <div className="col-span-2">
-                            <p className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide mt-2">{t("students.address")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">{t("students.address")}</p>
                         </div>
                         {addressFields.map(field => (
                             <div key={field.key}>
@@ -232,7 +232,7 @@ export default function StudentsPage() {
                             />
                         </div>
                         <div className="col-span-2">
-                            <p className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide mt-2">{t("students.assignment")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">{t("students.assignment")}</p>
                         </div>
                         <div>
                             <Label>{t("students.parent")}</Label>
@@ -264,7 +264,7 @@ export default function StudentsPage() {
                             />
                         </div>
                         <div className="col-span-2">
-                            <p className="text-xs font-semibold text-[--muted-foreground] uppercase tracking-wide mt-2">{t("students.emergencyContact")}</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">{t("students.emergencyContact")}</p>
                         </div>
                         {emergencyFields.map(field => (
                             <div key={field.key}>

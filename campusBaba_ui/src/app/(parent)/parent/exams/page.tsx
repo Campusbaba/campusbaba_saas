@@ -75,9 +75,9 @@ export default function ParentExamsPage() {
         <>
             <Header title={t("parentPortal.exams.title")} />
             <main className="p-5 space-y-4">
-                <h2 className="text-base font-semibold text-[--foreground]">{t("parentPortal.exams.upcomingPastExams")}</h2>
+                <h2 className="text-base font-semibold text-foreground">{t("parentPortal.exams.upcomingPastExams")}</h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("parentPortal.exams.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("parentPortal.exams.loading")}</div>
                 ) : (
                     <DataTable data={exams} columns={columns} title="Exams" exportFilename="parent-exams" />
                 )}

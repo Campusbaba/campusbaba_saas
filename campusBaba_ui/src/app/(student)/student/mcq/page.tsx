@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/lib/toast";
-import { CheckSquare, Play, Award } from "lucide-react";
+import { CheckSquare, Play, Award, CheckCircle2, Circle } from "lucide-react";
 
 export default function StudentMcqPage() {
   const qc = useQueryClient();
@@ -166,22 +166,27 @@ export default function StudentMcqPage() {
                       {idx + 1}. {q.questionText}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      {q.options.map((opt, oIdx) => (
-                        <label
-                          key={oIdx}
-                          className="flex items-center gap-2 border rounded-md p-2 text-sm cursor-pointer hover:bg-muted/40"
-                        >
-                          <input
-                            type="radio"
-                            name={`ans-${q.questionId}`}
-                            checked={answers[q.questionId] === oIdx}
-                            onChange={() =>
+                      {q.options.map((opt, oIdx) => {
+                        const selected = answers[q.questionId] === oIdx;
+                        return (
+                          <Button
+                            key={oIdx}
+                            type="button"
+                            variant={selected ? "default" : "outline"}
+                            className="justify-start h-auto py-2.5 px-3 text-left font-normal"
+                            onClick={() =>
                               setAnswers((prev) => ({ ...prev, [q.questionId]: oIdx }))
                             }
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      ))}
+                          >
+                            {selected ? (
+                              <CheckCircle2 className="h-4 w-4 mr-2 shrink-0" />
+                            ) : (
+                              <Circle className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
+                            )}
+                            <span className="truncate">{opt}</span>
+                          </Button>
+                        );
+                      })}
                     </div>
                   </Card>
                 ))}

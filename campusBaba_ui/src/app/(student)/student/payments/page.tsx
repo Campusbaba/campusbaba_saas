@@ -50,9 +50,9 @@ export default function StudentPaymentsPage() {
         <>
             <Header title={t("studentPortal.payments.myPayments")} />
             <main className="p-5 space-y-4">
-                <h2 className="text-base font-semibold text-[--foreground]">{t("studentPortal.payments.paymentHistory")}</h2>
+                <h2 className="text-base font-semibold text-foreground">{t("studentPortal.payments.paymentHistory")}</h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("studentPortal.payments.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("studentPortal.payments.loading")}</div>
                 ) : (
                     <DataTable data={payments} columns={columns} title={t("studentPortal.payments.payments")} exportFilename="my-payments" />
                 )}

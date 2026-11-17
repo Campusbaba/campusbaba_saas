@@ -50,7 +50,7 @@ export default function ParentPaymentsPage() {
             <main className="p-5 space-y-4">
                 {children.length > 1 && (
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-[--muted-foreground]">{t("parentPortal.payments.child")}</span>
+                        <span className="text-sm text-muted-foreground">{t("parentPortal.payments.child")}</span>
                         <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                             <SelectTrigger className="w-52"><SelectValue placeholder={t("parentPortal.payments.selectChild")} /></SelectTrigger>
                             <SelectContent>
@@ -61,11 +61,11 @@ export default function ParentPaymentsPage() {
                         </Select>
                     </div>
                 )}
-                <h2 className="text-base font-semibold text-[--foreground]">
+                <h2 className="text-base font-semibold text-foreground">
                     {t("parentPortal.payments.paymentHistory")}{selectedStudent ? ` — ${selectedStudent.firstName} ${selectedStudent.lastName}` : ""}
                 </h2>
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("parentPortal.payments.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("parentPortal.payments.loading")}</div>
                 ) : (
                     <DataTable data={payments} columns={columns} title="Payments" exportFilename="parent-payments" />
                 )}

@@ -80,7 +80,7 @@ function StatCard({ label, value, icon: Icon, color }: {
         <div className="card p-4 flex items-center gap-4">
             <div className={`p-3 rounded-xl ${color}`}><Icon size={20} className="text-white" /></div>
             <div>
-                <p className="text-xs text-[--muted-foreground]">{label}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="text-lg font-bold">{value}</p>
             </div>
         </div>
@@ -246,7 +246,7 @@ export default function PaymentsPage() {
                         <Eye size={12} />{t("payments.invoice")}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button>
-                    <Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button>
                 </div>
             ),
         },
@@ -319,16 +319,16 @@ export default function PaymentsPage() {
                 </div>
 
                 {/* ── Tabs ──────────────────────────────────────────── */}
-                <div className="flex items-center gap-2 border-b border-[--border]">
+                <div className="flex items-center gap-2 border-b border-border">
                     <button
                         onClick={() => setTab("payments")}
-                        className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === "payments" ? "border-[--primary] text-[--primary]" : "border-transparent text-[--muted-foreground]"}`}
+                        className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === "payments" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
                     >
                         <CreditCard size={14} className="inline mr-1 mb-0.5" />{t("payments.allPaymentsTab")}
                     </button>
                     <button
                         onClick={() => setTab("enrollments")}
-                        className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === "enrollments" ? "border-[--primary] text-[--primary]" : "border-transparent text-[--muted-foreground]"}`}
+                        className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === "enrollments" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
                     >
                         <UserCheck size={14} className="inline mr-1 mb-0.5" />{t("payments.enrollments")}
                     </button>
@@ -340,12 +340,12 @@ export default function PaymentsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-base font-semibold">{t("payments.allPayments")}</h2>
-                                <p className="text-sm text-[--muted-foreground]">{pagination?.totalItems ?? 0} {t("payments.totalRecords")}</p>
+                                <p className="text-sm text-muted-foreground">{pagination?.totalItems ?? 0} {t("payments.totalRecords")}</p>
                             </div>
                             <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("payments.addPayment")}</Button>
                         </div>
                         {loading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("payments.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("payments.loading")}</div>
                             : <DataTable data={payments} columns={paymentColumns} title={t("common.pages.payments")} exportFilename="payments" />
                         }
                     </div>
@@ -357,7 +357,7 @@ export default function PaymentsPage() {
                         <div className="flex items-center justify-between flex-wrap gap-3">
                             <div>
                                 <h2 className="text-base font-semibold">{t("payments.studentEnrollments")}</h2>
-                                <p className="text-sm text-[--muted-foreground]">{enrollmentPagination?.totalItems ?? 0} {t("payments.totalRecords")}</p>
+                                <p className="text-sm text-muted-foreground">{enrollmentPagination?.totalItems ?? 0} {t("payments.totalRecords")}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Label className="text-sm whitespace-nowrap">{t("payments.filterByStatus")}</Label>
@@ -373,7 +373,7 @@ export default function PaymentsPage() {
                             </div>
                         </div>
                         {enrollmentsLoading
-                            ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("payments.loading")}</div>
+                            ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("payments.loading")}</div>
                             : <DataTable data={enrollments} columns={enrollmentColumns} title={t("payments.enrollments")} exportFilename="enrollments" />
                         }
                     </div>

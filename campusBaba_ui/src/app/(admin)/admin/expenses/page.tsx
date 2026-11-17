@@ -169,7 +169,7 @@ export default function ExpensesPage() {
             const val = String(getValue());
             return <Badge variant={val === "approved" ? "default" : "secondary"}>{statusLabel(val)}</Badge>;
         } },
-        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-[--danger]" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
+        { id: "actions", header: "", cell: ({ row: { original: r } }) => (<div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil size={13} /></Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => setConfirm(r)}><Trash2 size={13} /></Button></div>) },
     ];
 
     return (
@@ -180,16 +180,16 @@ export default function ExpensesPage() {
                 {/* ── Stat Cards ───────────────────────────────────────────── */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="card p-4 space-y-1">
-                        <p className="text-xs text-[--muted-foreground]">{t("expenses.thisMonth")}</p>
+                        <p className="text-xs text-muted-foreground">{t("expenses.thisMonth")}</p>
                         <p className="text-2xl font-bold">{formatCurrency(totalThisMonth)}</p>
-                        <p className="text-xs text-[--muted-foreground]">{t("expenses.expensesCount", { count: thisMonthExpenses.length })}</p>
+                        <p className="text-xs text-muted-foreground">{t("expenses.expensesCount", { count: thisMonthExpenses.length })}</p>
                     </div>
                     <div className="card p-4 space-y-1">
-                        <p className="text-xs text-[--muted-foreground]">{t("expenses.totalPaid")}</p>
+                        <p className="text-xs text-muted-foreground">{t("expenses.totalPaid")}</p>
                         <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p>
                     </div>
                     <div className="card p-4 space-y-1">
-                        <p className="text-xs text-[--muted-foreground]">{t("expenses.pending")}</p>
+                        <p className="text-xs text-muted-foreground">{t("expenses.pending")}</p>
                         <p className="text-2xl font-bold text-amber-500">{formatCurrency(totalPending)}</p>
                     </div>
                 </div>
@@ -197,7 +197,7 @@ export default function ExpensesPage() {
                 {/* ── Charts ───────────────────────────────────────────────── */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="card p-4">
-                        <p className="text-xs font-semibold text-[--muted-foreground] mb-3">{t("expenses.monthlySpend")}</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-3">{t("expenses.monthlySpend")}</p>
                         <ResponsiveContainer width="100%" height={180}>
                             <BarChart data={monthlyChartData} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
@@ -208,7 +208,7 @@ export default function ExpensesPage() {
                         </ResponsiveContainer>
                     </div>
                     <div className="card p-4">
-                        <p className="text-xs font-semibold text-[--muted-foreground] mb-3">{t("expenses.byCategory")}</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-3">{t("expenses.byCategory")}</p>
                         <ResponsiveContainer width="100%" height={180}>
                             <PieChart>
                                 <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label={({ name }) => name} fontSize={11}>
@@ -222,7 +222,7 @@ export default function ExpensesPage() {
                         </ResponsiveContainer>
                     </div>
                     <div className="card p-4">
-                        <p className="text-xs font-semibold text-[--muted-foreground] mb-3">{t("expenses.bySubcategory")}</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-3">{t("expenses.bySubcategory")}</p>
                         <ResponsiveContainer width="100%" height={180}>
                             <PieChart>
                                 <Pie data={subcategoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} label={({ name }) => name} fontSize={11}>
@@ -242,7 +242,7 @@ export default function ExpensesPage() {
                     {statusChartData.map(s => (
                         <div key={s.name} className="card px-4 py-2 flex items-center gap-2 flex-1">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: STATUS_COLORS[s.name] ?? "#94a3b8" }} />
-                            <span className="text-xs capitalize text-[--muted-foreground]">{statusLabel(s.name)}</span>
+                            <span className="text-xs capitalize text-muted-foreground">{statusLabel(s.name)}</span>
                             <span className="ml-auto text-sm font-semibold">{s.value}</span>
                         </div>
                     ))}
@@ -254,13 +254,13 @@ export default function ExpensesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {RECURRING_TEMPLATES.map(template => (
                             <button key={template.label} onClick={() => openFromTemplate(template)}
-                                className="card p-3 flex items-center gap-3 hover:border-[--primary] hover:shadow-sm transition-all text-left group">
+                                className="card p-3 flex items-center gap-3 hover:border-primary hover:shadow-sm transition-all text-left group">
                                 <span className={`p-2 rounded-lg ${template.color}`}>{template.icon}</span>
                                 <div className="min-w-0">
                                     <p className="text-sm font-medium truncate">{template.label}</p>
-                                    <p className="text-xs text-[--muted-foreground] capitalize">{categoryLabel(template.category)}</p>
+                                    <p className="text-xs text-muted-foreground capitalize">{categoryLabel(template.category)}</p>
                                 </div>
-                                <Plus size={14} className="ml-auto shrink-0 opacity-0 group-hover:opacity-100 text-[--primary] transition-opacity" />
+                                <Plus size={14} className="ml-auto shrink-0 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                             </button>
                         ))}
                     </div>
@@ -268,10 +268,10 @@ export default function ExpensesPage() {
 
                 {/* ── Table ────────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between">
-                    <div><h2 className="text-base font-semibold">{t("expenses.allExpenses")}</h2><p className="text-sm text-[--muted-foreground]">{t("expenses.total")} {pagination?.totalItems ?? 0}</p></div>
+                    <div><h2 className="text-base font-semibold">{t("expenses.allExpenses")}</h2><p className="text-sm text-muted-foreground">{t("expenses.total")} {pagination?.totalItems ?? 0}</p></div>
                     <Button onClick={openAdd}><Plus size={15} className="mr-1" />{t("expenses.addExpense")}</Button>
                 </div>
-                {loading ? <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("common.operations.loading")}</div>
+                {loading ? <div className="card p-10 text-center text-sm text-muted-foreground">{t("common.operations.loading")}</div>
                     : <DataTable data={expenses} columns={columns} title={t("expenses.allExpenses")} exportFilename="expenses" />}
             </main>
 

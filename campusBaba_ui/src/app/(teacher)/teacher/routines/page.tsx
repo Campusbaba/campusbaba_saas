@@ -40,12 +40,12 @@ export default function TeacherRoutinesPage() {
         <>
             <Header title={t("teacherPortal.routines.title")} />
             <main className="p-5 space-y-4">
-                <h2 className="text-base font-semibold text-[--foreground]">{t("teacherPortal.routines.myClassRoutines")}</h2>
+                <h2 className="text-base font-semibold text-foreground">{t("teacherPortal.routines.myClassRoutines")}</h2>
                 {error && (
                     <div className="card p-4 text-sm text-red-500">{error}</div>
                 )}
                 {loading ? (
-                    <div className="card p-10 text-center text-[--muted-foreground] text-sm">{t("teacherPortal.routines.loading")}</div>
+                    <div className="card p-10 text-center text-muted-foreground text-sm">{t("teacherPortal.routines.loading")}</div>
                 ) : (
                     <DataTable data={routines} columns={columns} title="My Routines" exportFilename="teacher-routines" />
                 )}

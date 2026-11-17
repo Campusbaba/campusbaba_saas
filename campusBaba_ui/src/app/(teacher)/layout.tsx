@@ -5,7 +5,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     return (
         <SidebarProvider>
             <TeacherSidebar />
-            <SidebarInset className="flex flex-col min-w-0 bg-[--background]">
+            <SidebarInset className="flex flex-col min-w-0 bg-background">
                 {children}
             </SidebarInset>
         </SidebarProvider>

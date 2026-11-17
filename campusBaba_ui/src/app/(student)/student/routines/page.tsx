@@ -49,7 +49,7 @@ export default function StudentRoutinesPage() {
             <Header title={t("studentPortal.routines.myRoutine")} />
             <main className="p-5 space-y-6">
                 {loading && routines.length === 0 ? (
-                    <div className="card p-10 text-center text-sm text-[--muted-foreground]">{t("studentPortal.routines.loading")}</div>
+                    <div className="card p-10 text-center text-sm text-muted-foreground">{t("studentPortal.routines.loading")}</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {DAYS.map(day => {
@@ -58,26 +58,26 @@ export default function StudentRoutinesPage() {
 
                             return (
                                 <div key={day} className="space-y-3">
-                                    <h3 className="capitalize font-semibold text-[--foreground] border-b border-[--border] pb-2">
+                                    <h3 className="capitalize font-semibold text-foreground border-b border-border pb-2">
                                         {t(`routines.${day}`)}
                                     </h3>
                                     {dayRoutines.map(routine => (
                                         <Card key={routine._id} className="overflow-hidden">
-                                            <div className="h-1 bg-[--primary]" />
+                                            <div className="h-1 bg-primary" />
                                             <CardContent className="p-3 space-y-2">
                                                 <h4 className="font-semibold text-sm">{routine.subject}</h4>
 
-                                                <div className="flex items-center gap-2 text-xs text-[--muted-foreground]">
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     <Clock size={12} className="shrink-0" />
                                                     <span>{routine.startTime} - {routine.endTime}</span>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-xs text-[--muted-foreground]">
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     <MapPin size={12} className="shrink-0" />
                                                     <span>{t("studentPortal.routines.room", { number: routine.roomNumber })}</span>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-xs text-[--muted-foreground]">
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                     <User size={12} className="shrink-0" />
                                                     <span>
                                                         {(routine.teacherId as { firstName?: string })?.firstName
@@ -92,7 +92,7 @@ export default function StudentRoutinesPage() {
                             );
                         })}
                         {Object.keys(groupedRoutines).length === 0 && !loading && (
-                            <div className="col-span-full py-10 text-center text-[--muted-foreground]">
+                            <div className="col-span-full py-10 text-center text-muted-foreground">
                                 {t("studentPortal.routines.noRoutines")}
                             </div>
                         )}

@@ -3,9 +3,14 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Payment, Student, Course } from "@/types/viewModels";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { Printer, Download, Share2, X } from "lucide-react";
+import { Printer, Download, Share2 } from "lucide-react";
 import jsPDF from "jspdf";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -434,50 +439,35 @@ export function InvoiceDialog({ open, onClose, payment }: InvoiceDialogProps) {
     }
 
     return (
-        <>
-            {/* Backdrop */}
-            {open && (
-                <div
-                    className="fixed inset-0 z-50 flex flex-col"
-                    onClick={(e) => e.target === e.currentTarget && onClose()}
-                >
-                    {/* Scrim */}
-                    <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-                    {/* Panel */}
-                    <div className="relative z-10 m-auto flex flex-col rounded-xl shadow-2xl overflow-hidden bg-white"
-                        style={{ width: 720, maxWidth: "95vw", maxHeight: "92vh" }}
-                    >
-                        {/* Toolbar */}
-                        <div className="flex items-center justify-between px-5 py-3 border-b bg-gray-50 shrink-0">
-                            <p className="font-semibold text-sm text-gray-700">{inv}</p>
-                            <div className="flex items-center gap-2">
-                                <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5">
-                                    <Printer size={14} /> Print
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5">
-                                    <Download size={14} /> Download PDF
-                                </Button>
-                                <Button size="sm" className="gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white" onClick={handleWhatsApp}>
-                                    <Share2 size={14} /> WhatsApp
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={onClose}><X size={16} /></Button>
-                            </div>
-                        </div>
-
-                        {/* Invoice Preview */}
-                        <div className="overflow-y-auto flex-1 p-6 bg-gray-100">
-                            <div
-                                ref={printRef}
-                                className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 mx-auto"
-                                style={{ maxWidth: 640 }}
-                            >
-                                <InvoiceLayout payment={payment} />
-                            </div>
-                        </div>
+        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+            <DialogContent className="sm:max-w-[740px] max-h-[92vh] p-0 gap-0 overflow-hidden flex flex-col">
+                {/* Toolbar */}
+                <div className="flex items-center justify-between px-5 py-3 pr-12 border-b bg-muted/40 shrink-0">
+                    <DialogTitle className="font-semibold text-sm">{inv}</DialogTitle>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5">
+                            <Printer size={14} /> Print
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5">
+                            <Download size={14} /> Download PDF
+                        </Button>
+                        <Button size="sm" className="gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white" onClick={handleWhatsApp}>
+                            <Share2 size={14} /> WhatsApp
+                        </Button>
                     </div>
                 </div>
-            )}
-        </>
+
+                {/* Invoice Preview */}
+                <div className="overflow-y-auto flex-1 p-6 bg-muted/30">
+                    <div
+                        ref={printRef}
+                        className="bg-white rounded-xl shadow-sm border border-border p-10 mx-auto"
+                        style={{ maxWidth: 640 }}
+                    >
+                        <InvoiceLayout payment={payment} />
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }

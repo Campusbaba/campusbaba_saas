@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/lib/toast";
-import { CheckSquare, Plus, Trash2 } from "lucide-react";
+import { CheckSquare, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
 
 interface DraftQuestion {
   questionText: string;
@@ -205,21 +205,27 @@ export default function TeacherMcqPage() {
                       onChange={(e) => updateQuestion(qIdx, { questionText: e.target.value })}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {q.options.map((opt, oIdx) => (
-                        <div key={oIdx} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`correct-${qIdx}`}
-                            checked={q.correctOptionIndex === oIdx}
-                            onChange={() => updateQuestion(qIdx, { correctOptionIndex: oIdx })}
-                          />
-                          <Input
-                            placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
-                            value={opt}
-                            onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
-                          />
-                        </div>
-                      ))}
+                      {q.options.map((opt, oIdx) => {
+                        const isCorrect = q.correctOptionIndex === oIdx;
+                        return (
+                          <div key={oIdx} className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant={isCorrect ? "default" : "outline"}
+                              onClick={() => updateQuestion(qIdx, { correctOptionIndex: oIdx })}
+                              title="Mark as correct option"
+                            >
+                              {isCorrect ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                            </Button>
+                            <Input
+                              placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
+                              value={opt}
+                              onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </Card>
                 ))}

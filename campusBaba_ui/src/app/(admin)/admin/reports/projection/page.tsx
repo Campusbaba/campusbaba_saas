@@ -112,13 +112,13 @@ export default function ProjectionPage() {
                     <ArrowLeft size={16} />
                 </Button>
                 <div>
-                    <h1 className="text-xl font-bold text-[--foreground]">{t("reports.businessProjectionTitle")}</h1>
-                    <p className="text-xs text-[--muted-foreground]">{t("reports.forecastBasedOn")}</p>
+                    <h1 className="text-xl font-bold text-foreground">{t("reports.businessProjectionTitle")}</h1>
+                    <p className="text-xs text-muted-foreground">{t("reports.forecastBasedOn")}</p>
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                     <div className="flex items-center gap-2 text-sm">
-                        <TrendingUp size={14} className="text-[--muted-foreground]" />
-                        <span className="text-[--muted-foreground] text-xs">{t("reports.growthPercent")}</span>
+                        <TrendingUp size={14} className="text-muted-foreground" />
+                        <span className="text-muted-foreground text-xs">{t("reports.growthPercent")}</span>
                         <input
                             type="number"
                             value={growthRate}
@@ -160,7 +160,7 @@ export default function ProjectionPage() {
             <div className="card p-4">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold">{t("reports.historicalPlusProjection")}</h3>
-                    <span className="text-xs text-[--muted-foreground]">* = {t("reports.projectedMonths")}</span>
+                    <span className="text-xs text-muted-foreground">* = {t("reports.projectedMonths")}</span>
                 </div>
                 <ResponsiveContainer width="100%" height={320}>
                     <ComposedChart data={combinedData}>
