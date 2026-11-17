@@ -39,6 +39,7 @@ import { PlatformSaasService } from "../application/services/PlatformSaasService
 import { InvitationAuthService } from "../application/services/InvitationAuthService";
 import { FileStorageService } from "../application/services/FileStorageService";
 import { BangladeshModulesService } from "../application/services/BangladeshModulesService";
+import { GovernanceControlService } from "../application/services/GovernanceControlService";
 
 export interface AppContainer {
   readonly config: AppConfig;
@@ -60,6 +61,7 @@ export interface AppContainer {
   readonly invitationAuth: InvitationAuthService;
   readonly fileStorage: FileStorageService;
   readonly bdModules: BangladeshModulesService;
+  readonly governance: GovernanceControlService;
 }
 
 /**
@@ -182,6 +184,15 @@ export function createContainer(cfg: AppConfig = defaultConfig): AppContainer {
     idGen: idGenerator,
   });
 
+  const governance = new GovernanceControlService({
+    audit,
+    providerResolver,
+    initialCorsOrigins: cfg.tenancy.corsAllowedOrigins,
+    initialReservedSubdomains: cfg.tenancy.reservedSubdomains,
+    initialAllowedMimes: cfg.storage.allowedMimeTypes,
+    initialMaxUploadBytes: cfg.storage.maxUploadBytes,
+  });
+
   return Object.freeze({
     config: cfg,
     storage,
@@ -202,6 +213,7 @@ export function createContainer(cfg: AppConfig = defaultConfig): AppContainer {
     invitationAuth,
     fileStorage,
     bdModules,
+    governance,
   });
 }
 

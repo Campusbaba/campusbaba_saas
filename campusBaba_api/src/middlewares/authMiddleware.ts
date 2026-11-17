@@ -179,6 +179,7 @@ export const authenticate = (
 
 /**
  * Role-Based & Permission-Based Access Control Middleware (Fixes P0-2)
+ * Evaluates against the live, dynamically configured RBAC matrix in `container.governance`!
  */
 export const authorize = (...requiredPermissions: PermissionCode[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -189,8 +190,16 @@ export const authorize = (...requiredPermissions: PermissionCode[]) => {
       });
     }
 
+    const activeTenantId =
+      req.tenant?.subdomain || req.resolvedTenantSlug || req.user.tenantId;
+
     for (const perm of requiredPermissions) {
-      if (!roleHasPermission(req.user.role, perm)) {
+      const allowed = container.governance.hasPermission(
+        activeTenantId,
+        req.user.role,
+        perm
+      );
+      if (!allowed) {
         return res.status(403).json({
           success: false,
           message: `Forbidden: role '${req.user.role}' lacks permission '${perm}'`,
@@ -198,6 +207,37 @@ export const authorize = (...requiredPermissions: PermissionCode[]) => {
       }
     }
 
+    next();
+  };
+};
+
+/**
+ * Dynamic Feature Flag Middleware
+ * Blocks access to a module if the SuperAdmin or Tenant Admin has disabled that module in the UI.
+ */
+export const requireFeatureFlag = (
+  feature:
+    | "library"
+    | "transport"
+    | "hostel"
+    | "sms"
+    | "onlinePayments"
+    | "coachingBatches"
+    | "gpa5Grading"
+    | "madrasaTrack"
+) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const activeTenantId =
+      req.tenant?.subdomain || req.resolvedTenantSlug || req.user?.tenantId;
+    if (
+      activeTenantId &&
+      !container.governance.isFeatureEnabled(activeTenantId, feature)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: `Module '${feature}' is currently disabled for this organization. Enable it in the Control Center.`,
+      });
+    }
     next();
   };
 };

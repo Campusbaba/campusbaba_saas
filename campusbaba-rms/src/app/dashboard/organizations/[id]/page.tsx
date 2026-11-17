@@ -17,7 +17,9 @@ import {
   Ban,
   Trash2,
   Save,
-  Clock,
+  KeyRound,
+  Download,
+  Sliders,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -32,9 +34,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -49,9 +51,56 @@ import {
   updateOrganization,
   suspendOrganization,
   activateOrganization,
+  exportOrganization,
+  impersonateOrganization,
   deleteOrganization,
+  getTenantGovernance,
+  updateTenantGovernance,
 } from "@/lib/api";
 import { toast } from "sonner";
+
+const FEATURE_MODULES = [
+  {
+    key: "coachingBatches",
+    label: "Coaching & Batch Management",
+    desc: "Batch capacity, waitlist, pro-rated mid-month fees & MCQ exams",
+  },
+  {
+    key: "gpa5Grading",
+    label: "Bangladesh 5.00 GPA & 4th Subject",
+    desc: "NCTB 5.00 GPA scale, 4th-subject bonus & merit tabulation sheets",
+  },
+  {
+    key: "madrasaTrack",
+    label: "Madrasa Track (Dakhil / Alim / Hifz)",
+    desc: "Alia & Qawmi madrasa tracks and Arabic medium support",
+  },
+  {
+    key: "onlinePayments",
+    label: "MFS TrxID & Online Payment Gateways",
+    desc: "bKash, Nagad, Rocket manual TrxID verification & SSLCommerz",
+  },
+  {
+    key: "sms",
+    label: "BTRC SMS Gateway & Alerts",
+    desc: "Bangla Unicode 70-char SMS wallet & automated guardian alerts",
+  },
+  {
+    key: "library",
+    label: "Library & Book Loans",
+    desc: "ISBN/Barcode catalogue, issue/return & overdue fine tracking",
+  },
+  {
+    key: "transport",
+    label: "Transport & Vehicle Fleet",
+    desc: "Routes, stops, vehicle fitness/tax-token expiry alerts",
+  },
+  {
+    key: "hostel",
+    label: "Hostel, Rooms & Mess Management",
+    desc: "Room/bed allocation, daily meal on/off & bazar cost tracking",
+  },
+] as const;
 
 export default function OrganizationDetailPage() {
   const { id } = useParams();
@@ -60,7 +109,7 @@ export default function OrganizationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Editable fields
+  // Quota Editable fields
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     maxStudents: 0,
@@ -70,9 +119,32 @@ export default function OrganizationDetailPage() {
   });
   const [saving, setSaving] = useState(false);
 
+  // Per-Tenant Feature Flags & Security Governance
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({
+    coachingBatches: true,
+    gpa5Grading: true,
+    madrasaTrack: false,
+    onlinePayments: true,
+    sms: true,
+    library: true,
+    transport: true,
+    hostel: true,
+  });
+  const [securitySettings, setSecuritySettings] = useState({
+    allowQrSelfRegistration: true,
+    requireAccountantTrxVerification: true,
+    autoActivateStudentOnPayment: true,
+  });
+  const [customDomain, setCustomDomain] = useState("");
+  const [savingGov, setSavingGov] = useState(false);
+
+  // Impersonation state
+  const [impersonateReason, setImpersonateReason] = useState("");
+  const [impersonating, setImpersonating] = useState(false);
+
   // Confirm dialog
   const [confirmAction, setConfirmAction] = useState<
-    "suspend" | "activate" | "delete" | null
+    "suspend" | "activate" | "export" | "delete" | null
   >(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -80,12 +152,24 @@ export default function OrganizationDetailPage() {
     try {
       const response = await getOrganizationDetails(id as string);
       setData(response.data);
+      const t = response.data.tenant;
       setEditForm({
-        maxStudents: response.data.tenant.maxStudents,
-        maxTeachers: response.data.tenant.maxTeachers,
-        maxAdmins: response.data.tenant.maxAdmins,
-        billingPlan: response.data.tenant.billingPlan,
+        maxStudents: t.maxStudents,
+        maxTeachers: t.maxTeachers,
+        maxAdmins: t.maxAdmins,
+        billingPlan: t.billingPlan,
       });
+
+      if (t.subdomain) {
+        const govRes = await getTenantGovernance(t.subdomain).catch(() => null);
+        if (govRes?.data) {
+          if (govRes.data.featureFlags) setFeatureFlags(govRes.data.featureFlags);
+          if (govRes.data.securitySettings) {
+            setSecuritySettings(govRes.data.securitySettings);
+          }
+          if (govRes.data.customDomain) setCustomDomain(govRes.data.customDomain);
+        }
+      }
     } catch {
       setError("Failed to fetch organization details.");
     } finally {
@@ -102,13 +186,55 @@ export default function OrganizationDetailPage() {
     setSaving(true);
     try {
       await updateOrganization(id as string, editForm);
-      toast.success("Organization updated successfully");
+      toast.success("Organization quotas updated successfully");
       setEditMode(false);
       fetchDetails();
     } catch {
       toast.error("Failed to update organization");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveGovernance = async () => {
+    if (!data?.tenant?.subdomain) return;
+    setSavingGov(true);
+    try {
+      await updateTenantGovernance(data.tenant.subdomain, {
+        customDomain,
+        featureFlags,
+        securitySettings,
+      });
+      toast.success(
+        `Modules & security policies applied immediately for ${data.tenant.name}!`
+      );
+    } catch {
+      toast.error("Failed to update tenant governance settings");
+    } finally {
+      setSavingGov(false);
+    }
+  };
+
+  const handleImpersonate = async () => {
+    if (!impersonateReason || impersonateReason.trim().length < 5) {
+      toast.error("Please enter a valid audit reason (min 5 characters)");
+      return;
+    }
+    setImpersonating(true);
+    try {
+      const res = await impersonateOrganization(
+        id as string,
+        impersonateReason.trim()
+      );
+      navigator.clipboard?.writeText(res.data.token).catch(() => null);
+      toast.success(
+        `15-minute audited impersonation token issued for ${res.data.tenantSubdomain} (copied to clipboard)`
+      );
+      setImpersonateReason("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Impersonation failed");
+    } finally {
+      setImpersonating(false);
     }
   };
 
@@ -125,15 +251,23 @@ export default function OrganizationDetailPage() {
           await activateOrganization(id as string);
           toast.success("Organization activated");
           break;
+        case "export":
+          await exportOrganization(id as string);
+          toast.success(
+            "Organization archive exported & 14-day retention hold started"
+          );
+          break;
         case "delete":
           await deleteOrganization(id as string);
-          toast.success("Organization deleted");
+          toast.success("Organization verified and purged");
           router.push("/dashboard/organizations");
           return;
       }
       fetchDetails();
-    } catch {
-      toast.error(`Failed to ${confirmAction} organization`);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || `Failed to ${confirmAction} organization`
+      );
     } finally {
       setActionLoading(false);
       setConfirmAction(null);
@@ -187,7 +321,7 @@ export default function OrganizationDetailPage() {
   return (
     <div className="space-y-6 mt-2 animate-fade-in">
       {/* ─── Header ─── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -226,8 +360,8 @@ export default function OrganizationDetailPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons (Safe Offboarding Pipeline: Suspend -> Export -> Purge) */}
+        <div className="flex items-center gap-2 flex-wrap">
           {tenant.subscriptionStatus === "active" ? (
             <Button
               variant="outline"
@@ -236,18 +370,29 @@ export default function OrganizationDetailPage() {
               className="text-amber-400 border-amber-500/20 hover:bg-amber-500/10"
             >
               <Ban className="h-4 w-4 mr-1.5" />
-              Suspend
+              1. Suspend
             </Button>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmAction("activate")}
-              className="text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
-            >
-              <Power className="h-4 w-4 mr-1.5" />
-              Activate
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmAction("activate")}
+                className="text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10"
+              >
+                <Power className="h-4 w-4 mr-1.5" />
+                Reactivate
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmAction("export")}
+                className="text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/10"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                2. Export Archive
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
@@ -256,7 +401,7 @@ export default function OrganizationDetailPage() {
             className="text-red-400 border-red-500/20 hover:bg-red-500/10"
           >
             <Trash2 className="h-4 w-4 mr-1.5" />
-            Delete
+            3. Verified Purge
           </Button>
         </div>
       </div>
@@ -275,10 +420,7 @@ export default function OrganizationDetailPage() {
                 / {tenant.maxStudents}
               </span>
             </div>
-            <Progress
-              value={studentPercent}
-              className="mt-3 h-2"
-            />
+            <Progress value={studentPercent} className="mt-3 h-2" />
             <p className="text-xs text-muted-foreground mt-2">
               {studentPercent.toFixed(0)}% capacity used
             </p>
@@ -297,10 +439,7 @@ export default function OrganizationDetailPage() {
                 / {tenant.maxTeachers}
               </span>
             </div>
-            <Progress
-              value={teacherPercent}
-              className="mt-3 h-2"
-            />
+            <Progress value={teacherPercent} className="mt-3 h-2" />
             <p className="text-xs text-muted-foreground mt-2">
               {teacherPercent.toFixed(0)}% capacity used
             </p>
@@ -321,10 +460,7 @@ export default function OrganizationDetailPage() {
                 / {tenant.maxAdmins}
               </span>
             </div>
-            <Progress
-              value={employeePercent}
-              className="mt-3 h-2"
-            />
+            <Progress value={employeePercent} className="mt-3 h-2" />
             <p className="text-xs text-muted-foreground mt-2">
               {employeePercent.toFixed(0)}% capacity used
             </p>
@@ -332,9 +468,126 @@ export default function OrganizationDetailPage() {
         </Card>
       </div>
 
-      {/* ─── Info & Controls ─── */}
+      {/* ─── Per-Tenant Feature Flags, Security Overrides & Impersonation ─── */}
+      <Card className="border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Sliders className="h-4 w-4 text-primary" />
+              Organization Modules, Security Policies & Audited Impersonation
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Enable or disable specific Bangladesh campus modules and security controls for {tenant.name} in real time.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleSaveGovernance}
+            disabled={savingGov}
+            className="gradient-primary text-white"
+          >
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            {savingGov ? "Saving..." : "Apply Module & Security Config"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Module Toggles Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {FEATURE_MODULES.map((mod) => (
+              <div
+                key={mod.key}
+                className="flex items-start justify-between p-3 rounded-lg border border-border/50 bg-secondary/20"
+              >
+                <div className="pr-2">
+                  <p className="text-xs font-semibold">{mod.label}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                    {mod.desc}
+                  </p>
+                </div>
+                <Switch
+                  checked={!!featureFlags[mod.key]}
+                  onCheckedChange={(v) =>
+                    setFeatureFlags({ ...featureFlags, [mod.key]: v })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Security Overrides + Custom Domain + Audited Impersonation */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2 border-t border-border/40">
+            <div className="space-y-2">
+              <Label className="text-xs">Verified Custom Domain (Optional)</Label>
+              <Input
+                placeholder="e.g. portal.dhakapublic.edu.bd"
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
+                className="text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Tenant Security Policies</Label>
+              <div className="flex flex-col gap-2 text-xs">
+                <label className="flex items-center justify-between p-2 rounded border border-border/50">
+                  <span>Allow QR Self-Registration Invites</span>
+                  <Switch
+                    checked={securitySettings.allowQrSelfRegistration}
+                    onCheckedChange={(v) =>
+                      setSecuritySettings({
+                        ...securitySettings,
+                        allowQrSelfRegistration: v,
+                      })
+                    }
+                  />
+                </label>
+                <label className="flex items-center justify-between p-2 rounded border border-border/50">
+                  <span>Require Accountant Verification on MFS TrxID</span>
+                  <Switch
+                    checked={securitySettings.requireAccountantTrxVerification}
+                    onCheckedChange={(v) =>
+                      setSecuritySettings({
+                        ...securitySettings,
+                        requireAccountantTrxVerification: v,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+                Time-Boxed (15m) Audited Impersonation
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter support ticket / audit reason..."
+                  value={impersonateReason}
+                  onChange={(e) => setImpersonateReason(e.target.value)}
+                  className="text-xs"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImpersonate}
+                  disabled={impersonating}
+                  className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                >
+                  {impersonating ? "Issuing..." : "Impersonate"}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Every action taken during impersonation is recorded in the platform audit log.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ─── Info & Quota Controls ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Organization Info */}
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle className="text-base font-semibold">
@@ -383,18 +636,6 @@ export default function OrganizationDetailPage() {
                   })}
                 </p>
               </div>
-              <div className="col-span-2">
-                <p className="text-xs text-muted-foreground mb-1">
-                  <Database className="h-3 w-3 inline mr-1" />
-                  Database URI
-                </p>
-                <code className="text-xs font-mono bg-secondary/50 px-2 py-1 rounded block truncate">
-                  {tenant.dbURI.replace(
-                    /\/\/[^:]+:[^@]+@/,
-                    "//****:****@"
-                  )}
-                </code>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -403,7 +644,7 @@ export default function OrganizationDetailPage() {
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">
-              Quota Configuration
+              Quota & Plan Configuration
             </CardTitle>
             {!editMode ? (
               <Button
@@ -412,7 +653,7 @@ export default function OrganizationDetailPage() {
                 onClick={() => setEditMode(true)}
               >
                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                Edit
+                Edit Quotas
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -494,7 +735,7 @@ export default function OrganizationDetailPage() {
                 <Select
                   value={editForm.billingPlan}
                   onValueChange={(val) =>
-                    setEditForm({ ...editForm, billingPlan: val })
+                    setEditForm({ ...editForm, billingPlan: val || "postpaid" })
                   }
                   disabled={!editMode}
                 >
@@ -502,8 +743,10 @@ export default function OrganizationDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="starter">Starter</SelectItem>
                     <SelectItem value="postpaid">Postpaid</SelectItem>
                     <SelectItem value="prepaid">Prepaid</SelectItem>
+                    <SelectItem value="coaching_pro">Coaching Pro</SelectItem>
                     <SelectItem value="enterprise">Enterprise</SelectItem>
                   </SelectContent>
                 </Select>
@@ -580,11 +823,6 @@ export default function OrganizationDetailPage() {
                   ))}
                 </TableBody>
               </Table>
-              {lists.students.length > 20 && (
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  Showing 20 of {lists.students.length} students
-                </p>
-              )}
             </TabsContent>
 
             <TabsContent value="teachers" className="mt-0">
@@ -685,21 +923,27 @@ export default function OrganizationDetailPage() {
           onOpenChange={() => setConfirmAction(null)}
           title={
             confirmAction === "delete"
-              ? `Delete ${tenant.name}?`
+              ? `Purge ${tenant.name}?`
+              : confirmAction === "export"
+              ? `Export Archive for ${tenant.name}?`
               : confirmAction === "suspend"
               ? `Suspend ${tenant.name}?`
               : `Activate ${tenant.name}?`
           }
           description={
             confirmAction === "delete"
-              ? "This will permanently remove this organization and all its data. This cannot be undone."
+              ? "This will permanently purge R2 storage objects under tenants/{subdomain}/ and remove all tenant records."
+              : confirmAction === "export"
+              ? "This generates a verified SHA-256 export manifest and begins the retention hold before final purge."
               : confirmAction === "suspend"
-              ? "This will disable platform access for this organization."
+              ? "This will immediately block platform access for this organization."
               : "This will restore platform access for this organization."
           }
           confirmLabel={
             confirmAction === "delete"
-              ? "Delete"
+              ? "Purge Tenant"
+              : confirmAction === "export"
+              ? "Export Archive"
               : confirmAction === "suspend"
               ? "Suspend"
               : "Activate"

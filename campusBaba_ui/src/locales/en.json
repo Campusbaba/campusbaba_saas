@@ -20,7 +20,8 @@
       "enrollment": "Enrollment Report",
       "income": "Income Report",
       "profitexpense": "Profit & Expense Report",
-      "projection": "Projection Report"
+      "projection": "Projection Report",
+      "accessControl": "Access & Security Control"
     },
     "operations": {
       "add": "Add",

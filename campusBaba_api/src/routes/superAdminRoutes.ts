@@ -20,6 +20,13 @@ import {
   updateGlobalNotice,
   deleteGlobalNotice,
 } from "../controllers/superAdminController";
+import {
+  getPlatformGovernanceOverview,
+  updatePlatformSecurityPolicy,
+  updateGlobalRolePermissions,
+  getSuperAdminTenantGovernance,
+  updateSuperAdminTenantGovernance,
+} from "../controllers/governanceController";
 import { requireSuperAdmin, rateLimit } from "../middlewares/authMiddleware";
 
 const router = Router();
@@ -48,6 +55,13 @@ router.get("/audit-logs", getAuditLogs);
 
 // Plans Management (Fixes P0-11)
 router.post("/plans", upsertPlan);
+
+// Centralized Security, RBAC & Feature Flag Control Plane
+router.get("/governance", getPlatformGovernanceOverview);
+router.put("/governance/policy", updatePlatformSecurityPolicy);
+router.put("/governance/rbac", updateGlobalRolePermissions);
+router.get("/governance/tenants/:tenantKey", getSuperAdminTenantGovernance);
+router.put("/governance/tenants/:tenantKey", updateSuperAdminTenantGovernance);
 
 // Tenants Lifecycle (Fixes P0-6: suspend -> export -> delete/purge + audited impersonation)
 router.get("/tenants", getTenants);

@@ -1,19 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import {
-  Settings as SettingsIcon,
   User,
   Shield,
   Palette,
   Globe,
   Save,
   Lock,
-  Eye,
-  EyeOff,
   Moon,
   Sun,
+  KeyRound,
+  Cpu,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,316 +24,696 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  getPlatformGovernance,
+  updatePlatformSecurityPolicy,
+  updateGlobalRolePermissions,
+} from "@/lib/api";
 import { toast } from "sonner";
+
+const FALLBACK_PERMISSIONS = [
+  { code: "users:invite", module: "users" },
+  { code: "users:manage", module: "users" },
+  { code: "students:read", module: "students" },
+  { code: "students:write", module: "students" },
+  { code: "students:delete", module: "students" },
+  { code: "teachers:read", module: "teachers" },
+  { code: "teachers:write", module: "teachers" },
+  { code: "teachers:delete", module: "teachers" },
+  { code: "employees:read", module: "employees" },
+  { code: "employees:write", module: "employees" },
+  { code: "employees:delete", module: "employees" },
+  { code: "parents:read", module: "parents" },
+  { code: "parents:write", module: "parents" },
+  { code: "parents:delete", module: "parents" },
+  { code: "academics:read", module: "academics" },
+  { code: "academics:write", module: "academics" },
+  { code: "attendance:read", module: "attendance" },
+  { code: "attendance:mark", module: "attendance" },
+  { code: "batches:read", module: "batches" },
+  { code: "batches:write", module: "batches" },
+  { code: "exams:read", module: "exams" },
+  { code: "exams:write", module: "exams" },
+  { code: "marks:read", module: "marks" },
+  { code: "marks:evaluate", module: "marks" },
+  { code: "marks:publish", module: "marks" },
+  { code: "payments:read", module: "payments" },
+  { code: "payments:write", module: "payments" },
+  { code: "payments:verify_trx", module: "payments" },
+  { code: "expenses:read", module: "expenses" },
+  { code: "expenses:write", module: "expenses" },
+  { code: "expenses:approve", module: "expenses" },
+  { code: "reports:financial:read", module: "reports" },
+  { code: "notices:read", module: "notices" },
+  { code: "notices:write", module: "notices" },
+  { code: "sms:send", module: "sms" },
+  { code: "library:read", module: "library" },
+  { code: "library:write", module: "library" },
+  { code: "transport:read", module: "transport" },
+  { code: "transport:write", module: "transport" },
+  { code: "hostel:read", module: "hostel" },
+  { code: "hostel:write", module: "hostel" },
+  { code: "files:upload", module: "files" },
+  { code: "files:read", module: "files" },
+  { code: "files:sensitive:read", module: "files" },
+];
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [savingRbac, setSavingRbac] = useState(false);
 
-  const [profile, setProfile] = useState({
-    name: "Super Admin",
-    email: "admin@campusbaba.com",
+  // Centralized Platform Security & Operational Policy
+  const [policy, setPolicy] = useState({
+    enforceHostOnlyResolution: false,
+    maintenanceMode: false,
+    showDemoCredentialsOnLogin: false,
+    loginRateLimitPerMin: 30,
+    apiRateLimitPerMin: 120,
+    accessTtlMinutes: 15,
+    refreshTtlDays: 30,
+    corsAllowedOrigins: "http://localhost:3000,http://localhost:3001",
+    reservedSubdomains: "www,app,api,admin,rms,mail,support,status",
+    storageMaxUploadMb: 10,
+    profilePhotoMaxKb: 300,
+    enforceBtrcPromotionalWindow: true,
+    defaultSmsSenderId: "CAMPUSBABA",
+    autoActivateStudentOnPayment: true,
+    enabledPaymentGateways: ["manual", "bkash", "nagad", "sslcommerz", "aamarpay"],
   });
 
-  const [passwords, setPasswords] = useState({
-    current: "",
-    newPassword: "",
-    confirm: "",
+  // Dynamic RBAC Matrix
+  const [selectedRole, setSelectedRole] = useState<string>("employee");
+  const [propagateToAll, setPropagateToAll] = useState<boolean>(true);
+  const [roleMatrix, setRoleMatrix] = useState<Record<string, string[]>>({
+    admin: FALLBACK_PERMISSIONS.map((p) => p.code),
+    employee: [
+      "students:read",
+      "students:write",
+      "payments:read",
+      "payments:write",
+      "payments:verify_trx",
+      "expenses:read",
+      "expenses:write",
+      "notices:read",
+    ],
+    teacher: [
+      "students:read",
+      "academics:read",
+      "attendance:read",
+      "attendance:mark",
+      "exams:read",
+      "marks:read",
+      "marks:evaluate",
+      "notices:read",
+      "notices:write",
+    ],
+    student: [
+      "students:read",
+      "academics:read",
+      "attendance:read",
+      "exams:read",
+      "marks:read",
+      "payments:read",
+      "notices:read",
+    ],
+    parent: [
+      "students:read",
+      "parents:read",
+      "attendance:read",
+      "exams:read",
+      "marks:read",
+      "payments:read",
+      "notices:read",
+    ],
+    accountant: [
+      "students:read",
+      "payments:read",
+      "payments:write",
+      "payments:verify_trx",
+      "expenses:read",
+      "expenses:write",
+      "expenses:approve",
+      "reports:financial:read",
+    ],
+    librarian: ["students:read", "library:read", "library:write"],
   });
-  const [showPasswords, setShowPasswords] = useState(false);
-
-  const [defaults, setDefaults] = useState({
-    maxStudents: 100,
-    maxTeachers: 10,
-    maxAdmins: 3,
-    defaultPlan: "postpaid",
+  const [permissionCatalog, setPermissionCatalog] = useState(FALLBACK_PERMISSIONS);
+  const [activeDrivers, setActiveDrivers] = useState<Record<string, any>>({
+    storage: "local",
+    sms: "console",
+    cache: "memory",
+    queue: "inline",
+    payments: ["manual", "bkash", "nagad", "sslcommerz", "aamarpay"],
   });
 
-  const [appearance, setAppearance] = useState({
-    sidebarCollapsed: false,
-    compactMode: false,
-  });
-
-  const handleProfileSave = () => {
-    toast.success("Profile updated successfully");
+  const fetchGovernance = async () => {
+    setLoading(true);
+    try {
+      const res = await getPlatformGovernance();
+      if (res.data) {
+        const p = res.data.policy;
+        if (p) {
+          setPolicy({
+            ...p,
+            corsAllowedOrigins: Array.isArray(p.corsAllowedOrigins)
+              ? p.corsAllowedOrigins.join(",")
+              : p.corsAllowedOrigins,
+            reservedSubdomains: Array.isArray(p.reservedSubdomains)
+              ? p.reservedSubdomains.join(",")
+              : p.reservedSubdomains,
+          });
+        }
+        if (res.data.roleMatrix) setRoleMatrix(res.data.roleMatrix);
+        if (res.data.permissionCatalog?.length) {
+          setPermissionCatalog(res.data.permissionCatalog);
+        }
+        if (res.data.activeDrivers) setActiveDrivers(res.data.activeDrivers);
+      }
+    } catch {
+      // Fallback to local state if backend is offline
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordSave = () => {
-    if (passwords.newPassword !== passwords.confirm) {
-      toast.error("Passwords do not match");
-      return;
+  useEffect(() => {
+    fetchGovernance();
+  }, []);
+
+  const handleSavePolicy = async () => {
+    setSavingPolicy(true);
+    try {
+      await updatePlatformSecurityPolicy({
+        ...policy,
+        corsAllowedOrigins: policy.corsAllowedOrigins
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        reservedSubdomains: policy.reservedSubdomains
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean),
+      });
+      toast.success("Platform security & operational policies applied immediately!");
+    } catch {
+      toast.error("Failed to update platform security policy");
+    } finally {
+      setSavingPolicy(false);
     }
-    if (passwords.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    toast.success("Password changed successfully");
-    setPasswords({ current: "", newPassword: "", confirm: "" });
   };
 
-  const handleDefaultsSave = () => {
-    toast.success("Default quotas updated");
+  const toggleRolePermission = (permCode: string) => {
+    const current = roleMatrix[selectedRole] || [];
+    const updated = current.includes(permCode)
+      ? current.filter((c) => c !== permCode)
+      : [...current, permCode];
+    setRoleMatrix({ ...roleMatrix, [selectedRole]: updated });
+  };
+
+  const handleSaveRbac = async () => {
+    setSavingRbac(true);
+    try {
+      await updateGlobalRolePermissions({
+        roleCode: selectedRole,
+        permissions: roleMatrix[selectedRole] || [],
+        propagateToAllTenants: propagateToAll,
+      });
+      toast.success(
+        `RBAC permissions saved for '${selectedRole}'${propagateToAll ? " and propagated to all organizations" : ""}!`
+      );
+    } catch {
+      toast.error("Failed to save RBAC permissions");
+    } finally {
+      setSavingRbac(false);
+    }
+  };
+
+  const togglePaymentGateway = (gw: string) => {
+    const current = policy.enabledPaymentGateways || [];
+    const updated = current.includes(gw)
+      ? current.filter((g) => g !== gw)
+      : [...current, gw];
+    setPolicy({ ...policy, enabledPaymentGateways: updated });
   };
 
   return (
-    <div className="space-y-6 mt-2 animate-fade-in max-w-4xl">
-      <Tabs defaultValue="profile" className="space-y-6">
+    <div className="space-y-6 mt-2 animate-fade-in max-w-6xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Centralized Zero-Code Control Plane — Manage RBAC permissions, security policies, rate limits, storage quotas, and payment/SMS gateways across the entire platform.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchGovernance} disabled={loading}>
+          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+          Sync Live State
+        </Button>
+      </div>
+
+      <Tabs defaultValue="rbac" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="profile" className="text-xs">
-            <User className="h-3.5 w-3.5 mr-1.5" />
-            Profile
+          <TabsTrigger value="rbac" className="text-xs">
+            <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+            RBAC Permission Matrix
           </TabsTrigger>
           <TabsTrigger value="security" className="text-xs">
-            <Lock className="h-3.5 w-3.5 mr-1.5" />
-            Security
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
+            Security, CORS & Rate Limits
           </TabsTrigger>
-          <TabsTrigger value="platform" className="text-xs">
-            <Globe className="h-3.5 w-3.5 mr-1.5" />
-            Platform
+          <TabsTrigger value="drivers" className="text-xs">
+            <Cpu className="h-3.5 w-3.5 mr-1.5" />
+            R2 Storage, SMS & Gateways
           </TabsTrigger>
           <TabsTrigger value="appearance" className="text-xs">
             <Palette className="h-3.5 w-3.5 mr-1.5" />
-            Appearance
+            Theme & Appearance
           </TabsTrigger>
         </TabsList>
 
-        {/* ─── Profile ─── */}
-        <TabsContent value="profile">
+        {/* ─── TAB 1: Global RBAC Permission Matrix ─── */}
+        <TabsContent value="rbac">
           <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                Profile Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full gradient-primary text-white text-xl font-bold">
-                  SA
-                </div>
-                <div>
-                  <p className="font-semibold">{profile.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {profile.email}
-                  </p>
-                  <Badge className="mt-1 text-xs bg-primary/10 text-primary">
-                    Super Admin
-                  </Badge>
-                </div>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  Dynamic Role-Based Access Control (RBAC) Matrix
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Toggle exact API & UI permissions per role. Changes take effect immediately without touching code.
+                </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={profile.name}
-                    onChange={(e) =>
-                      setProfile({ ...profile, name: e.target.value })
-                    }
-                    className="mt-1.5"
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={propagateToAll}
+                    onCheckedChange={(v) => setPropagateToAll(!!v)}
                   />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) =>
-                      setProfile({ ...profile, email: e.target.value })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
+                  <span>Apply to all active organizations</span>
+                </label>
                 <Button
-                  onClick={handleProfileSave}
+                  onClick={handleSaveRbac}
+                  disabled={savingRbac}
                   className="gradient-primary text-white"
+                  size="sm"
                 >
-                  <Save className="h-4 w-4 mr-1.5" />
-                  Save Profile
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  {savingRbac ? "Saving..." : `Save '${selectedRole.toUpperCase()}' Permissions`}
                 </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Role Selector Pills */}
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(roleMatrix).map((role) => (
+                  <Button
+                    key={role}
+                    type="button"
+                    size="sm"
+                    variant={selectedRole === role ? "default" : "outline"}
+                    onClick={() => setSelectedRole(role)}
+                    className={
+                      selectedRole === role
+                        ? "gradient-primary text-white capitalize"
+                        : "capitalize"
+                    }
+                  >
+                    {role}
+                    <Badge variant="secondary" className="ml-2 text-[10px]">
+                      {(roleMatrix[role] || []).length}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Permission Checkboxes Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {permissionCatalog
+                  .filter((p) => !p.code.startsWith("platform:"))
+                  .map((perm) => {
+                    const checked = (roleMatrix[selectedRole] || []).includes(
+                      perm.code
+                    );
+                    return (
+                      <label
+                        key={perm.code}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                          checked
+                            ? "border-primary/50 bg-primary/5"
+                            : "border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() =>
+                              toggleRolePermission(perm.code)
+                            }
+                          />
+                          <div>
+                            <p className="text-xs font-mono font-medium">
+                              {perm.code}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground uppercase">
+                              Module: {perm.module}
+                            </p>
+                          </div>
+                        </div>
+                        {checked && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        )}
+                      </label>
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ─── Security ─── */}
+        {/* ─── TAB 2: Platform Security, CORS & Rate Limits ─── */}
         <TabsContent value="security">
           <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Lock className="h-4 w-4 text-primary" />
-                Change Password
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <Label>Current Password</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    type={showPasswords ? "text" : "password"}
-                    value={passwords.current}
-                    onChange={(e) =>
-                      setPasswords({ ...passwords, current: e.target.value })
-                    }
-                    placeholder="Enter current password"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => setShowPasswords(!showPasswords)}
-                  >
-                    {showPasswords ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Zero-Touch Security, Subdomain Isolation & Rate Limiting
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Control tenant resolution rules, JWT lifetimes, rate limits, and CORS allowlists in real time.
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>New Password</Label>
-                  <Input
-                    type={showPasswords ? "text" : "password"}
-                    value={passwords.newPassword}
-                    onChange={(e) =>
-                      setPasswords({
-                        ...passwords,
-                        newPassword: e.target.value,
-                      })
-                    }
-                    placeholder="Enter new password"
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label>Confirm New Password</Label>
-                  <Input
-                    type={showPasswords ? "text" : "password"}
-                    value={passwords.confirm}
-                    onChange={(e) =>
-                      setPasswords({ ...passwords, confirm: e.target.value })
-                    }
-                    placeholder="Confirm new password"
-                    className="mt-1.5"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={handlePasswordSave}
-                  className="gradient-primary text-white"
-                >
-                  <Shield className="h-4 w-4 mr-1.5" />
-                  Update Password
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ─── Platform ─── */}
-        <TabsContent value="platform">
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Globe className="h-4 w-4 text-primary" />
-                Default Quotas for New Tenants
-              </CardTitle>
+              <Button
+                onClick={handleSavePolicy}
+                disabled={savingPolicy}
+                className="gradient-primary text-white"
+                size="sm"
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {savingPolicy ? "Applying..." : "Apply Security Policy"}
+              </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                These values will be used as defaults when provisioning new
-                organizations.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Default Max Students</Label>
-                  <Input
-                    type="number"
-                    value={defaults.maxStudents}
-                    onChange={(e) =>
-                      setDefaults({
-                        ...defaults,
-                        maxStudents: +e.target.value,
-                      })
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div>
+                    <p className="text-sm font-medium">Strict Host-Only Resolution</p>
+                    <p className="text-xs text-muted-foreground">
+                      Reject x-tenant-id header unless matched by Host subdomain
+                    </p>
+                  </div>
+                  <Switch
+                    checked={policy.enforceHostOnlyResolution}
+                    onCheckedChange={(v) =>
+                      setPolicy({ ...policy, enforceHostOnlyResolution: v })
                     }
-                    className="mt-1.5"
                   />
                 </div>
-                <div>
-                  <Label>Default Max Teachers</Label>
-                  <Input
-                    type="number"
-                    value={defaults.maxTeachers}
-                    onChange={(e) =>
-                      setDefaults({
-                        ...defaults,
-                        maxTeachers: +e.target.value,
-                      })
+
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div>
+                    <p className="text-sm font-medium">Maintenance Mode</p>
+                    <p className="text-xs text-muted-foreground">
+                      Temporarily pause tenant mutations during cutover
+                    </p>
+                  </div>
+                  <Switch
+                    checked={policy.maintenanceMode}
+                    onCheckedChange={(v) =>
+                      setPolicy({ ...policy, maintenanceMode: v })
                     }
-                    className="mt-1.5"
                   />
                 </div>
-                <div>
-                  <Label>Default Max Admins</Label>
-                  <Input
-                    type="number"
-                    value={defaults.maxAdmins}
-                    onChange={(e) =>
-                      setDefaults({
-                        ...defaults,
-                        maxAdmins: +e.target.value,
-                      })
+
+                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div>
+                    <p className="text-sm font-medium">Auto-Activate on Payment</p>
+                    <p className="text-xs text-muted-foreground">
+                      Activate student status when tuition invoice is paid
+                    </p>
+                  </div>
+                  <Switch
+                    checked={policy.autoActivateStudentOnPayment}
+                    onCheckedChange={(v) =>
+                      setPolicy({ ...policy, autoActivateStudentOnPayment: v })
                     }
-                    className="mt-1.5"
                   />
-                </div>
-                <div>
-                  <Label>Default Billing Plan</Label>
-                  <Select
-                    value={defaults.defaultPlan}
-                    onValueChange={(val) =>
-                      setDefaults({ ...defaults, defaultPlan: val ?? "postpaid" })
-                    }
-                  >
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="postpaid">Postpaid</SelectItem>
-                      <SelectItem value="prepaid">Prepaid</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={handleDefaultsSave}
-                  className="gradient-primary text-white"
-                >
-                  <Save className="h-4 w-4 mr-1.5" />
-                  Save Defaults
-                </Button>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-xs">Login Rate Limit (req/min)</Label>
+                  <Input
+                    type="number"
+                    value={policy.loginRateLimitPerMin}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        loginRateLimitPerMin: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">API Rate Limit (req/min)</Label>
+                  <Input
+                    type="number"
+                    value={policy.apiRateLimitPerMin}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        apiRateLimitPerMin: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Access Token TTL (Minutes)</Label>
+                  <Input
+                    type="number"
+                    value={policy.accessTtlMinutes}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        accessTtlMinutes: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Refresh Token TTL (Days)</Label>
+                  <Input
+                    type="number"
+                    value={policy.refreshTtlDays}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        refreshTtlDays: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">
+                    Reserved Subdomains Blocklist (comma-separated)
+                  </Label>
+                  <Input
+                    value={policy.reservedSubdomains}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        reservedSubdomains: e.target.value,
+                      })
+                    }
+                    className="mt-1.5 font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">
+                    Explicit CORS Allowed Origins (alongside *.campusbaba.com)
+                  </Label>
+                  <Input
+                    value={policy.corsAllowedOrigins}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        corsAllowedOrigins: e.target.value,
+                      })
+                    }
+                    className="mt-1.5 font-mono text-xs"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ─── Appearance ─── */}
+        {/* ─── TAB 3: R2 Storage, SMS & Payment Gateways ─── */}
+        <TabsContent value="drivers">
+          <Card className="border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Cpu className="h-4 w-4 text-primary" />
+                  Plug-and-Play Drivers, Cloudflare R2 Guardrails & BTRC SMS Rules
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Monitor active infrastructure adapters and configure file upload limits, SMS rules, and payment gateways.
+                </p>
+              </div>
+              <Button
+                onClick={handleSavePolicy}
+                disabled={savingPolicy}
+                className="gradient-primary text-white"
+                size="sm"
+              >
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                Save Driver & Gateway Rules
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Active Drivers Status Bar */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: "StoragePort", val: activeDrivers.storage },
+                  { label: "SmsPort", val: activeDrivers.sms },
+                  { label: "CachePort", val: activeDrivers.cache },
+                  { label: "QueuePort", val: activeDrivers.queue },
+                  {
+                    label: "PaymentGateways",
+                    val: (activeDrivers.payments || []).join(", "),
+                  },
+                ].map((d) => (
+                  <div
+                    key={d.label}
+                    className="p-3 rounded-lg bg-secondary/40 border border-border/50"
+                  >
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {d.label}
+                    </p>
+                    <p className="text-xs font-mono font-semibold text-emerald-400 mt-1 truncate">
+                      {d.val}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-xs">Max Document Upload Size (MB)</Label>
+                  <Input
+                    type="number"
+                    value={policy.storageMaxUploadMb}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        storageMaxUploadMb: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Max Profile Photo Size (KB)</Label>
+                  <Input
+                    type="number"
+                    value={policy.profilePhotoMaxKb}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        profilePhotoMaxKb: +e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">
+                    Default BTRC Masking Sender ID (Max 11 chars)
+                  </Label>
+                  <Input
+                    maxLength={11}
+                    value={policy.defaultSmsSenderId}
+                    onChange={(e) =>
+                      setPolicy({
+                        ...policy,
+                        defaultSmsSenderId: e.target.value.toUpperCase(),
+                      })
+                    }
+                    className="mt-1.5 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                <div>
+                  <p className="text-sm font-medium">
+                    Enforce BTRC Promotional SMS Window (09:00 AM – 09:00 PM Asia/Dhaka)
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically blocks promotional bulk SMS outside BTRC permitted hours
+                  </p>
+                </div>
+                <Switch
+                  checked={policy.enforceBtrcPromotionalWindow}
+                  onCheckedChange={(v) =>
+                    setPolicy({ ...policy, enforceBtrcPromotionalWindow: v })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs mb-2 block">
+                  Enabled Bangladeshi Payment Gateways
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { code: "manual", label: "Manual Send-Money TrxID (bKash/Nagad/Rocket)" },
+                    { code: "bkash", label: "bKash Tokenized Merchant" },
+                    { code: "nagad", label: "Nagad Merchant API" },
+                    { code: "sslcommerz", label: "SSLCommerz Aggregator" },
+                    { code: "aamarpay", label: "aamarPay Aggregator" },
+                  ].map((gw) => {
+                    const active = (policy.enabledPaymentGateways || []).includes(
+                      gw.code
+                    );
+                    return (
+                      <label
+                        key={gw.code}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs ${
+                          active
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border/50 text-muted-foreground"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={active}
+                          onCheckedChange={() => togglePaymentGateway(gw.code)}
+                        />
+                        <span>{gw.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── TAB 4: Theme & Appearance ─── */}
         <TabsContent value="appearance">
           <Card className="border-border/50">
             <CardHeader>
@@ -342,7 +723,6 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Theme */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Theme</p>
@@ -357,15 +737,11 @@ export default function SettingsPage() {
                   ].map(({ value, icon: Icon, label }) => (
                     <Button
                       key={value}
-                      variant={
-                        theme === value ? "default" : "outline"
-                      }
+                      variant={theme === value ? "default" : "outline"}
                       size="sm"
                       onClick={() => setTheme(value)}
                       className={
-                        theme === value
-                          ? "gradient-primary text-white"
-                          : ""
+                        theme === value ? "gradient-primary text-white" : ""
                       }
                     >
                       <Icon className="h-3.5 w-3.5 mr-1.5" />
@@ -373,47 +749,6 @@ export default function SettingsPage() {
                     </Button>
                   ))}
                 </div>
-              </div>
-
-              <Separator />
-
-              {/* Compact Mode */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Compact Mode</p>
-                  <p className="text-xs text-muted-foreground">
-                    Reduce spacing and padding for denser layouts
-                  </p>
-                </div>
-                <Switch
-                  checked={appearance.compactMode}
-                  onCheckedChange={(checked) =>
-                    setAppearance({ ...appearance, compactMode: checked })
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              {/* Sidebar Default */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">
-                    Default Sidebar Collapsed
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Start with sidebar collapsed on page load
-                  </p>
-                </div>
-                <Switch
-                  checked={appearance.sidebarCollapsed}
-                  onCheckedChange={(checked) =>
-                    setAppearance({
-                      ...appearance,
-                      sidebarCollapsed: checked,
-                    })
-                  }
-                />
               </div>
             </CardContent>
           </Card>

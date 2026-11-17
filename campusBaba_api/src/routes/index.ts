@@ -16,6 +16,7 @@ import noticeRoutes from "./noticeRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import reportRoutes from "./reportRoutes";
 import bdModulesRoutes from "./bdModulesRoutes";
+import governanceRoutes from "./governanceRoutes";
 
 import superAdminRoutes from "./superAdminRoutes";
 import { tenantResolver } from "../middlewares/tenantResolver";
@@ -62,5 +63,8 @@ router.use(
 
 // Phase 4 Bangladesh & Cloudflare R2 Storage Modules
 router.use("/bd", bdModulesRoutes);
+
+// Centralized Tenant Access Control, RBAC, Feature Flags & Gateway Credentials
+router.use("/governance", governanceRoutes);
 
 export default router;

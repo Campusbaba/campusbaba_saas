@@ -1163,6 +1163,190 @@ async function main() {
         assert.strictEqual(purgeRes.body.data.purged, true);
       }
     );
+
+    await runTest(
+      "HTTP-Integration (Zero-Code Centralized Governance Control Plane)",
+      "Live RBAC permission toggling, live feature flag switches, platform security policies, and AES-256-GCM encrypted credentials",
+      async () => {
+        const saToken = jwt.sign(
+          { id: "sa-1", email: "owner@campusbaba.com", role: "superadmin" },
+          globalAppContainer.config.auth.accessSecret
+        );
+
+        const dhakaAdminToken = globalAppContainer.invitationAuth.issueSessionTokens({
+          id: "admin-dhaka",
+          email: "principal@dhakamodel.edu.bd",
+          role: "admin",
+          referenceId: "emp-principal",
+          tenantId: "dhakamodel",
+        }).accessToken;
+
+        const dhakaTeacherToken = globalAppContainer.invitationAuth.issueSessionTokens({
+          id: "tch-dhaka",
+          email: "teacher@dhakamodel.edu.bd",
+          role: "teacher",
+          referenceId: "tch-1",
+          tenantId: "dhakamodel",
+        }).accessToken;
+
+        // 1. SuperAdmin reads & updates global platform security policies
+        const getGov = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/superadmin/governance",
+          headers: { Authorization: `Bearer ${saToken}` },
+        });
+        assert.strictEqual(getGov.status, 200);
+        assert.strictEqual(getGov.body.data.policy.enforceBtrcPromotionalWindow, true);
+
+        const updatePolicy = await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/superadmin/governance/policy",
+          headers: { Authorization: `Bearer ${saToken}` },
+          body: {
+            loginRateLimitPerMin: 45,
+            corsAllowedOrigins: ["https://portal.dhakamodel.edu.bd"],
+          },
+        });
+        assert.strictEqual(updatePolicy.status, 200);
+        assert.strictEqual(updatePolicy.body.data.loginRateLimitPerMin, 45);
+
+        // 2. Dynamic Feature Flag Enforcement:
+        // SuperAdmin disables 'library' module for 'dhakamodel' -> POST /api/v1/bd/library/books immediately returns 403!
+        await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/superadmin/governance/tenants/dhakamodel",
+          headers: { Authorization: `Bearer ${saToken}` },
+          body: {
+            featureFlags: { library: false },
+          },
+        });
+
+        const blockedLibrary = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/library/books",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+          body: { title: "Physics 1st Paper", author: "Dr. Shahjahan Tapan", totalCopies: 5 },
+        });
+        assert.strictEqual(blockedLibrary.status, 403);
+        assert.ok(String(blockedLibrary.body.message).includes("Module 'library' is currently disabled"));
+
+        // Re-enable 'library' module -> immediately returns 201!
+        await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/superadmin/governance/tenants/dhakamodel",
+          headers: { Authorization: `Bearer ${saToken}` },
+          body: {
+            featureFlags: { library: true },
+          },
+        });
+
+        const allowedLibrary = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/library/books",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+          body: { title: "Physics 1st Paper", author: "Dr. Shahjahan Tapan", totalCopies: 5 },
+        });
+        assert.strictEqual(allowedLibrary.status, 201);
+
+        // 3. Dynamic RBAC Permission Matrix Enforcement:
+        const myGovRes = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/governance/my-config",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+        });
+        assert.strictEqual(myGovRes.status, 200);
+        const currentTeacherPerms: string[] = myGovRes.body.data.rolePermissions.teacher || [];
+
+        // Ensure teacher does NOT have 'library:write' -> POST /api/v1/bd/library/books returns 403!
+        await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/governance/config",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+          body: {
+            rolePermissions: {
+              teacher: currentTeacherPerms.filter((p) => p !== "library:write"),
+            },
+          },
+        });
+
+        const teacherLibraryWrite = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/library/books",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaTeacherToken}`,
+          },
+          body: { title: "Chemistry 1st Paper", author: "Hazari & Nag", totalCopies: 5 },
+        });
+        assert.strictEqual(teacherLibraryWrite.status, 403);
+
+        // Now grant 'library:write' to teacher via UI API -> Teacher POST /api/v1/bd/library/books immediately succeeds (201)!
+        await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/governance/config",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+          body: {
+            rolePermissions: {
+              teacher: [...currentTeacherPerms, "library:write"],
+            },
+          },
+        });
+
+        const teacherLibraryAllowed = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/bd/library/books",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaTeacherToken}`,
+          },
+          body: { title: "Chemistry 1st Paper", author: "Hazari & Nag", totalCopies: 5 },
+        });
+        assert.strictEqual(teacherLibraryAllowed.status, 201);
+
+        // 4. Encrypted Provider Credentials Vault (AES-256-GCM)
+        const credRes = await httpRequest(port, {
+          method: "POST",
+          path: "/api/v1/governance/provider-credentials",
+          headers: {
+            Host: "dhakamodel.campusbaba.com",
+            Authorization: `Bearer ${dhakaAdminToken}`,
+          },
+          body: {
+            capability: "payment",
+            providerCode: "bkash",
+            secrets: {
+              apiKey: "bkash-live-app-key-999",
+              apiSecret: "bkash-live-secret-999",
+            },
+          },
+        });
+        assert.strictEqual(credRes.status, 200);
+        assert.strictEqual(credRes.body.data.providerCode, "bkash");
+        assert.strictEqual(credRes.body.data.configured, true);
+
+        // Verify decrypted credentials inside ProviderResolver resolve a tenant-scoped bKash gateway
+        const resolved = globalAppContainer.providerResolver.resolvePaymentGateway(
+          "bkash",
+          "dhakamodel"
+        );
+        assert.strictEqual(resolved.gatewayCode, "bkash");
+      }
+    );
   } finally {
     server.close();
   }

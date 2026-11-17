@@ -20,7 +20,8 @@
       "enrollment": "ভর্তি রিপোর্ট",
       "income": "আয় রিপোর্ট",
       "profitexpense": "লাভ ও ব্যয় রিপোর্ট",
-      "projection": "প্রজেকশন রিপোর্ট"
+      "projection": "প্রজেকশন রিপোর্ট",
+      "accessControl": "নিরাপত্তা ও অ্যাক্সেস নিয়ন্ত্রণ"
     },
     "operations": {
       "add": "যোগ করুন",

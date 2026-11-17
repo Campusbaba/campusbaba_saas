@@ -32,10 +32,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
 import { ChartCard } from "@/components/chart-card";
-import { getOrganizations, getPlans } from "@/lib/api";
+import { getOrganizations, getPlans, upsertPlan } from "@/lib/api";
 
 interface Tenant {
   _id: string;
@@ -59,6 +61,34 @@ export default function BillingPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [planRates, setPlanRates] = useState<Record<string, number>>(PLAN_RATES);
   const [loading, setLoading] = useState(true);
+  const [planForm, setPlanForm] = useState({
+    code: "postpaid",
+    name: "Postpaid Standard",
+    priceBdt: 5000,
+    maxStudents: 500,
+    maxTeachers: 50,
+    storageQuotaMb: 2048,
+    monthlySmsQuota: 2000,
+  });
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planSavedMsg, setPlanSavedMsg] = useState<string | null>(null);
+
+  const handleSavePlan = async () => {
+    setSavingPlan(true);
+    setPlanSavedMsg(null);
+    try {
+      await upsertPlan(planForm);
+      setPlanRates((prev) => ({
+        ...prev,
+        [planForm.code]: Number(planForm.priceBdt),
+      }));
+      setPlanSavedMsg(`Plan '${planForm.code}' updated to ৳${planForm.priceBdt.toLocaleString()}/month across platform!`);
+    } catch {
+      // ignore
+    } finally {
+      setSavingPlan(false);
+    }
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -340,6 +370,78 @@ export default function BillingPage() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* ─── Dynamic Plan Pricing & Quota Editor (Zero-Code Control) ─── */}
+      <Card className="border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold">
+              Dynamic Plan Pricing & Quota Configurator
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Update monthly BDT rates, student/teacher limits, R2 storage quotas, and SMS allocations without touching code.
+            </p>
+          </div>
+          <Button size="sm" onClick={handleSavePlan} disabled={savingPlan}>
+            {savingPlan ? "Saving..." : "Update Plan Live"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {planSavedMsg && (
+            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+              {planSavedMsg}
+            </div>
+          )}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Plan Code</label>
+              <Input
+                value={planForm.code}
+                onChange={(e) => setPlanForm({ ...planForm, code: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Display Name</label>
+              <Input
+                value={planForm.name}
+                onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Monthly Price (৳)</label>
+              <Input
+                type="number"
+                value={planForm.priceBdt}
+                onChange={(e) => setPlanForm({ ...planForm, priceBdt: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Max Students</label>
+              <Input
+                type="number"
+                value={planForm.maxStudents}
+                onChange={(e) => setPlanForm({ ...planForm, maxStudents: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">R2 Storage (MB)</label>
+              <Input
+                type="number"
+                value={planForm.storageQuotaMb}
+                onChange={(e) => setPlanForm({ ...planForm, storageQuotaMb: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Monthly SMS</label>
+              <Input
+                type="number"
+                value={planForm.monthlySmsQuota}
+                onChange={(e) => setPlanForm({ ...planForm, monthlySmsQuota: Number(e.target.value) })}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 

@@ -75,6 +75,44 @@ export async function getAuditLogs(params?: {
   return res.data;
 }
 
+// ─── Centralized Governance, Security & RBAC Control Plane ──
+export async function getPlatformGovernance() {
+  const res = await api.get("/superadmin/governance");
+  return res.data;
+}
+
+export async function updatePlatformSecurityPolicy(
+  data: Record<string, unknown>
+) {
+  const res = await api.put("/superadmin/governance/policy", data);
+  return res.data;
+}
+
+export async function updateGlobalRolePermissions(data: {
+  roleCode: string;
+  permissions: string[];
+  propagateToAllTenants?: boolean;
+}) {
+  const res = await api.put("/superadmin/governance/rbac", data);
+  return res.data;
+}
+
+export async function getTenantGovernance(tenantKey: string) {
+  const res = await api.get(`/superadmin/governance/tenants/${tenantKey}`);
+  return res.data;
+}
+
+export async function updateTenantGovernance(
+  tenantKey: string,
+  data: Record<string, unknown>
+) {
+  const res = await api.put(
+    `/superadmin/governance/tenants/${tenantKey}`,
+    data
+  );
+  return res.data;
+}
+
 // ─── Dashboard Stats ────────────────────────────────
 export async function getDashboardStats() {
   const res = await api.get("/superadmin/dashboard-stats");
