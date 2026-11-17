@@ -1,17 +1,35 @@
 import { Request, Response } from "express";
-import { ClassRoom  } from "../models";
-import { Student  } from "../models";
-import { Routine  } from "../models";
+import { ClassRoom, Student, Routine, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
-import { nextSequence  } from "../models";
 import {
   getPaginationParams,
   createPaginationResult,
 } from "../utils/pagination";
+import { container } from "../composition/container";
 
 export const createClassRoom = asyncHandler(
   async (req: Request, res: Response) => {
+    const tenantKey = req.tenant?.subdomain || req.resolvedTenantSlug;
+    if (tenantKey) {
+      const saasTenant = container.platformSaas.getTenant(tenantKey);
+      const maxClasses =
+        (req.tenant as any)?.maxClasses ??
+        saasTenant?.maxClasses ??
+        50;
+      const currentClasses = await ClassRoom.countDocuments().catch(() => 0);
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey,
+          resource: "classes",
+          currentCountInDb: currentClasses,
+          limit: maxClasses,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
     const seq = await nextSequence("classroom");
     const classRoomId = `CR-${String(seq).padStart(4, "0")}`;
     const classRoom = await ClassRoom.create({ ...req.body, classRoomId });

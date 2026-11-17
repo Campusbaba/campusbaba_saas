@@ -11,21 +11,45 @@ import { container } from "../composition/container";
 export const createStudent = asyncHandler(
   async (req: Request, res: Response) => {
     const targetStatus = req.body.status || "active";
+    const tenantKey = req.tenant?.subdomain || req.resolvedTenantSlug;
 
-    // P0-9 Fix: Atomic quota enforcement
-    if (req.tenant && targetStatus === "active") {
+    // P0-9 Fix: Atomic quota enforcement (supports -1 for Unlimited students)
+    if (tenantKey && targetStatus === "active") {
+      const saasTenant = container.platformSaas.getTenant(tenantKey);
+      const maxStudents =
+        req.tenant?.maxStudents ?? saasTenant?.maxStudents ?? -1;
       const activeStudentsCount = await Student.countDocuments({
         status: "active",
-      });
+      }).catch(() => 0);
       try {
         container.platformSaas.reserveQuotaSlot({
-          tenantKey: req.tenant.subdomain,
+          tenantKey,
           resource: "students",
           currentCountInDb: activeStudentsCount,
-          limit: req.tenant.maxStudents,
+          limit: maxStudents,
         });
       } catch (err: any) {
         throw new AppError(403, err.message);
+      }
+    }
+
+    // Guardian 1:1 vs 1:Many student monitoring enforcement
+    if (tenantKey && req.body.parentId) {
+      const saasTenant = container.platformSaas.getTenant(tenantKey);
+      const multiAllowed =
+        (req.tenant as any)?.guardianMultiStudentAllowed ??
+        saasTenant?.guardianMultiStudentAllowed ??
+        true;
+      if (!multiAllowed) {
+        const existingChildrenForParent = await Student.countDocuments({
+          parentId: req.body.parentId,
+        }).catch(() => 0);
+        if (existingChildrenForParent >= 1) {
+          throw new AppError(
+            403,
+            "Organization policy restricts each Guardian portal account to monitoring 1 student (1:1 mode enabled)."
+          );
+        }
       }
     }
 

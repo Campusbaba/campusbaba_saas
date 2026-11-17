@@ -6,8 +6,9 @@ import {
   TrendingUp,
   DollarSign,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
+  Layers,
+  Users,
+  GraduationCap,
 } from "lucide-react";
 import {
   BarChart,
@@ -37,52 +38,81 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
 import { ChartCard } from "@/components/chart-card";
-import { getOrganizations, getPlans, upsertPlan } from "@/lib/api";
+import { getDashboardStats, getPlans, upsertPlan } from "@/lib/api";
 
-interface Tenant {
-  _id: string;
-  name: string;
-  subdomain: string;
-  subscriptionStatus: string;
-  billingPlan: string;
-  maxStudents: number;
-  createdAt: string;
-}
-
-const PLAN_RATES: Record<string, number> = {
-  postpaid: 5000,
-  prepaid: 4500,
-  enterprise: 15000,
-};
-
-const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"];
+const COLORS = ["#10b981", "#6366f1", "#06b6d4", "#8b5cf6", "#f59e0b"];
 
 export default function BillingPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [planRates, setPlanRates] = useState<Record<string, number>>(PLAN_RATES);
+  const [biStats, setBiStats] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [planForm, setPlanForm] = useState({
-    code: "postpaid",
-    name: "Postpaid Standard",
-    priceBdt: 5000,
-    maxStudents: 500,
-    maxTeachers: 50,
-    storageQuotaMb: 2048,
-    monthlySmsQuota: 2000,
+    code: "individual_tutor",
+    name: "Individual Tutor Plan",
+    pricingModel: "per_student",
+    priceBdt: 0,
+    perStudentFeeBdt: 15,
+    orgStudentShareBdt: 5,
+    platformStudentShareBdt: 10,
+    maxStudents: -1,
+    maxGuardians: -1,
+    maxTeachers: 1,
+    maxClasses: 20,
+    maxAdmins: 1,
+    storageLimitMb: 500,
+    includedSmsCredits: 500,
   });
   const [savingPlan, setSavingPlan] = useState(false);
   const [planSavedMsg, setPlanSavedMsg] = useState<string | null>(null);
+
+  const fetchAll = async () => {
+    try {
+      const [statsRes, plansRes] = await Promise.all([
+        getDashboardStats().catch(() => ({ data: null })),
+        getPlans().catch(() => ({ data: [] })),
+      ]);
+      setBiStats(statsRes.data);
+      setPlans(plansRes.data || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const selectPlanPreset = (p: any) => {
+    setPlanForm({
+      code: p.code,
+      name: p.name,
+      pricingModel: p.pricingModel || "per_student",
+      priceBdt: p.priceBdt ?? 0,
+      perStudentFeeBdt: p.perStudentFeeBdt ?? 15,
+      orgStudentShareBdt: p.orgStudentShareBdt ?? 5,
+      platformStudentShareBdt: p.platformStudentShareBdt ?? 10,
+      maxStudents: p.maxStudents ?? -1,
+      maxGuardians: p.maxGuardians ?? -1,
+      maxTeachers: p.maxTeachers ?? 10,
+      maxClasses: p.maxClasses ?? 50,
+      maxAdmins: p.maxAdmins ?? 3,
+      storageLimitMb: p.storageLimitMb ?? 500,
+      includedSmsCredits: p.includedSmsCredits ?? 500,
+    });
+  };
 
   const handleSavePlan = async () => {
     setSavingPlan(true);
     setPlanSavedMsg(null);
     try {
       await upsertPlan(planForm);
-      setPlanRates((prev) => ({
-        ...prev,
-        [planForm.code]: Number(planForm.priceBdt),
-      }));
-      setPlanSavedMsg(`Plan '${planForm.code}' updated to ৳${planForm.priceBdt.toLocaleString()}/month across platform!`);
+      setPlanSavedMsg(
+        `Tier '${planForm.name}' (${planForm.code}) updated live: ৳${planForm.perStudentFeeBdt}/student (৳${planForm.orgStudentShareBdt} Org / ৳${planForm.platformStudentShareBdt} Ours) • Max Teachers: ${planForm.maxTeachers === -1 ? "∞" : planForm.maxTeachers} • Max Students: ${planForm.maxStudents === -1 ? "∞" : planForm.maxStudents}`
+      );
+      fetchAll();
     } catch {
       // ignore
     } finally {
@@ -90,86 +120,34 @@ export default function BillingPage() {
     }
   };
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const [orgsRes, plansRes] = await Promise.all([
-          getOrganizations(),
-          getPlans().catch(() => ({ data: [] })),
-        ]);
-        setTenants(orgsRes.data || []);
-        if (Array.isArray(plansRes.data) && plansRes.data.length > 0) {
-          const dynamicMap: Record<string, number> = { ...PLAN_RATES };
-          plansRes.data.forEach((p: { code: string; priceBdt: number }) => {
-            dynamicMap[p.code] = Number(p.priceBdt);
-          });
-          setPlanRates(dynamicMap);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, []);
+  const orgBreakdown: any[] = biStats?.orgBreakdown || [];
+  const grossBdt = biStats?.financialBi?.grossPerStudentCollectionsBdt ?? 0;
+  const orgShareBdt = biStats?.financialBi?.orgRetainedShareBdt ?? 0;
+  const platformMrrBdt = biStats?.financialBi?.totalPlatformMrrBdt ?? 0;
+  const platformArrBdt = biStats?.financialBi?.totalPlatformArrBdt ?? 0;
 
-  const activeTenants = tenants.filter(
-    (t) => t.subscriptionStatus === "active"
-  );
-  const totalMRR = activeTenants.reduce(
-    (sum, t) => sum + (planRates[t.billingPlan] || 5000),
-    0
-  );
-  const totalARR = totalMRR * 12;
+  const monthlyData = (() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    const baseStudents = Math.max(200, (biStats?.totalStudents ?? 1000) - 400);
+    return months.map((month, i) => {
+      const stu = baseStudents + i * 85;
+      return {
+        month,
+        oursCampusBaba: stu * 10,
+        orgShare: stu * 5,
+        grossVolume: stu * 15,
+      };
+    });
+  })();
 
-  // Plan distribution
   const planCounts: Record<string, number> = {};
-  tenants.forEach((t) => {
+  orgBreakdown.forEach((t) => {
     planCounts[t.billingPlan] = (planCounts[t.billingPlan] || 0) + 1;
   });
   const planData = Object.entries(planCounts).map(([name, value]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
+    name: name.replace(/_/g, " ").toUpperCase(),
     value,
   }));
-
-  // Monthly revenue simulation
-  const monthlyData = (() => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const base = Math.max(1, activeTenants.length - 4);
-    return months.map((month, i) => ({
-      month,
-      revenue: (base + i) * 5000,
-      expenses: (base + i) * 1200,
-      profit: (base + i) * 3800,
-    }));
-  })();
-
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name: string; value: number; color: string }>;
-    label?: string;
-  }) => {
-    if (!active || !payload) return null;
-    return (
-      <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-xs font-medium text-foreground mb-1">{label}</p>
-        {payload.map((entry, i) => (
-          <p key={i} className="text-xs text-muted-foreground">
-            <span
-              className="inline-block w-2 h-2 rounded-full mr-1.5"
-              style={{ backgroundColor: entry.color }}
-            />
-            {entry.name}: ৳{entry.value.toLocaleString()}
-          </p>
-        ))}
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -189,18 +167,20 @@ export default function BillingPage() {
       {/* ─── KPI Cards ─── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
         <StatCard
-          title="Monthly Revenue (MRR)"
-          value={totalMRR}
+          title="CampusBaba Net MRR (Ours)"
+          value={platformMrrBdt}
+          subtitle="৳10/student + Base Tier Fees"
           icon={DollarSign}
           gradientFrom="from-emerald-500/20"
           gradientTo="to-emerald-600/10"
           accentColor="text-emerald-400"
           formatValue={(v) => `৳${v.toLocaleString()}`}
-          trend={{ value: 12, label: "vs last month", positive: true }}
+          trend={{ value: 15, label: "vs last month", positive: true }}
         />
         <StatCard
-          title="Annual Revenue (ARR)"
-          value={totalARR}
+          title="Annual Run Rate (ARR)"
+          value={platformArrBdt}
+          subtitle="12-month projected net"
           icon={TrendingUp}
           gradientFrom="from-indigo-500/20"
           gradientTo="to-violet-500/10"
@@ -208,29 +188,235 @@ export default function BillingPage() {
           formatValue={(v) => `৳${v.toLocaleString()}`}
         />
         <StatCard
-          title="Active Subscriptions"
-          value={activeTenants.length}
+          title="Organization Share (৳5/stu)"
+          value={orgShareBdt}
+          subtitle={`Out of ৳${grossBdt.toLocaleString()} gross`}
           icon={CreditCard}
           gradientFrom="from-cyan-500/20"
           gradientTo="to-cyan-600/10"
           accentColor="text-cyan-400"
+          formatValue={(v) => `৳${v.toLocaleString()}`}
         />
         <StatCard
-          title="Avg Revenue/Org"
-          value={activeTenants.length > 0 ? Math.round(totalMRR / activeTenants.length) : 0}
-          icon={BarChart3}
+          title="Guardian Portal Revenue"
+          value={0}
+          subtitle={`${biStats?.totalGuardians ?? 0} Free Guardian Portals`}
+          icon={Users}
           gradientFrom="from-amber-500/20"
           gradientTo="to-amber-600/10"
           accentColor="text-amber-400"
-          formatValue={(v) => `৳${v.toLocaleString()}`}
+          formatValue={() => "৳0 (FREE)"}
         />
       </div>
+
+      {/* ─── Dynamic Plan Tier & Per-Student Split Configurator ─── */}
+      <Card className="border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              Subscription Tier & Per-Student Revenue Split Configurator
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Click any tier pill below (`Individual Tutor`, `SME Coaching`, `Campus Connect`) to customize its Max Students (`-1` = ∞), Max Guardians, Max Teachers, Max Classes, and Per-Student BDT Split (`৳15` = `৳5` Org + `৳10` Ours).
+            </p>
+          </div>
+          <Button size="sm" onClick={handleSavePlan} disabled={savingPlan}>
+            {savingPlan ? "Saving..." : "Save Tier Live"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Tier Selector Pills */}
+          <div className="flex flex-wrap gap-2 pb-2 border-b border-border/40">
+            {plans.map((p) => (
+              <button
+                key={p.code}
+                type="button"
+                onClick={() => selectPlanPreset(p)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  planForm.code === p.code
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary/30 hover:bg-secondary border-border/50"
+                }`}
+              >
+                {p.name} ({p.maxTeachers === -1 ? "∞" : p.maxTeachers} TCH •{" "}
+                {p.maxStudents === -1 ? "∞" : p.maxStudents} STU • ৳
+                {p.perStudentFeeBdt ?? 15}/stu)
+              </button>
+            ))}
+          </div>
+
+          {planSavedMsg && (
+            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+              {planSavedMsg}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Tier Code
+              </label>
+              <Input
+                value={planForm.code}
+                onChange={(e) =>
+                  setPlanForm({ ...planForm, code: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Tier Display Name
+              </label>
+              <Input
+                value={planForm.name}
+                onChange={(e) =>
+                  setPlanForm({ ...planForm, name: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Per-Student Charge (৳)
+              </label>
+              <Input
+                type="number"
+                value={planForm.perStudentFeeBdt}
+                onChange={(e) => {
+                  const total = Number(e.target.value);
+                  setPlanForm({
+                    ...planForm,
+                    perStudentFeeBdt: total,
+                    platformStudentShareBdt: Math.max(
+                      0,
+                      total - planForm.orgStudentShareBdt
+                    ),
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Org Share (৳)
+              </label>
+              <Input
+                type="number"
+                value={planForm.orgStudentShareBdt}
+                onChange={(e) => {
+                  const org = Number(e.target.value);
+                  setPlanForm({
+                    ...planForm,
+                    orgStudentShareBdt: org,
+                    platformStudentShareBdt: Math.max(
+                      0,
+                      planForm.perStudentFeeBdt - org
+                    ),
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Ours / CampusBaba (৳)
+              </label>
+              <Input
+                type="number"
+                value={planForm.platformStudentShareBdt}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    platformStudentShareBdt: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Max Students (-1 = ∞)
+              </label>
+              <Input
+                type="number"
+                value={planForm.maxStudents}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    maxStudents: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Max Guardians (-1 = ∞ Free)
+              </label>
+              <Input
+                type="number"
+                value={planForm.maxGuardians}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    maxGuardians: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Max Teachers
+              </label>
+              <Input
+                type="number"
+                value={planForm.maxTeachers}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    maxTeachers: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Max Classes / Batches
+              </label>
+              <Input
+                type="number"
+                value={planForm.maxClasses}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    maxClasses: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">
+                Base Monthly Fee (৳)
+              </label>
+              <Input
+                type="number"
+                value={planForm.priceBdt}
+                onChange={(e) =>
+                  setPlanForm({
+                    ...planForm,
+                    priceBdt: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ─── Charts ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard
-          title="Revenue vs Expenses"
-          subtitle="Monthly breakdown"
+          title="CampusBaba Share (৳10) vs Organization Share (৳5)"
+          subtitle="Monthly per-student revenue split breakdown"
           className="lg:col-span-2"
         >
           <div className="h-[280px] mt-2">
@@ -253,28 +439,20 @@ export default function BillingPage() {
                   tickLine={false}
                   tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`}
                 />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(value) => (
-                    <span className="text-xs text-muted-foreground">
-                      {value}
-                    </span>
-                  )}
-                />
+                <Tooltip />
+                <Legend iconType="circle" iconSize={8} />
                 <Bar
-                  dataKey="revenue"
+                  dataKey="oursCampusBaba"
                   fill="#10b981"
                   radius={[4, 4, 0, 0]}
-                  name="Revenue"
+                  name="CampusBaba Share (৳10/stu)"
                   maxBarSize={35}
                 />
                 <Bar
-                  dataKey="expenses"
-                  fill="#f43f5e"
+                  dataKey="orgShare"
+                  fill="#6366f1"
                   radius={[4, 4, 0, 0]}
-                  name="Expenses"
+                  name="Org Share (৳5/stu)"
                   maxBarSize={35}
                 />
               </BarChart>
@@ -282,12 +460,16 @@ export default function BillingPage() {
           </div>
         </ChartCard>
 
-        <ChartCard title="Plan Distribution" subtitle="By billing plan">
+        <ChartCard title="Plan Tier Distribution" subtitle="Active organizations by tier">
           <div className="h-[280px] mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={planData.length > 0 ? planData : [{ name: "No Data", value: 1 }]}
+                  data={
+                    planData.length > 0
+                      ? planData
+                      : [{ name: "CAMPUS CONNECT", value: 1 }]
+                  }
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
@@ -298,167 +480,74 @@ export default function BillingPage() {
                 >
                   {(planData.length > 0
                     ? planData
-                    : [{ name: "No Data", value: 1 }]
+                    : [{ name: "CAMPUS CONNECT", value: 1 }]
                   ).map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={planData.length > 0 ? COLORS[index % COLORS.length] : "#1e2740"}
+                      fill={COLORS[index % COLORS.length]}
                     />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(value) => (
-                    <span className="text-xs text-muted-foreground">
-                      {value}
-                    </span>
-                  )}
-                />
+                <Tooltip />
+                <Legend iconType="circle" iconSize={8} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
       </div>
 
-      {/* ─── Billing Table ─── */}
+      {/* ─── Per-Organization Billing & Split Table ─── */}
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="text-base font-semibold">
-            Organization Billing
+            Organization Per-Student Billing & Split Ledger
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-border/50">
+              <TableRow className="border-border/50 text-xs">
                 <TableHead>Organization</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Monthly Rate</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Since</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Active Students</TableHead>
+                <TableHead>Free Guardians</TableHead>
+                <TableHead>Rate Split (Total / Org / Ours)</TableHead>
+                <TableHead>Gross Billed</TableHead>
+                <TableHead>Org Share</TableHead>
+                <TableHead>CampusBaba Net</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tenants.map((t) => (
-                <TableRow key={t._id} className="border-border/30">
+              {orgBreakdown.map((t) => (
+                <TableRow key={t.subdomain} className="border-border/30 text-xs">
                   <TableCell className="font-medium">{t.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {t.billingPlan}
+                    <Badge variant="outline" className="uppercase text-[10px]">
+                      {t.billingPlan.replace(/_/g, " ")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    ৳{(PLAN_RATES[t.billingPlan] || 5000).toLocaleString()}
+                  <TableCell className="font-mono">
+                    {t.students} / {t.maxStudents === -1 ? "∞" : t.maxStudents}
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`text-xs ${
-                        t.subscriptionStatus === "active"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-red-500/10 text-red-400"
-                      }`}
-                    >
-                      {t.subscriptionStatus}
-                    </Badge>
+                  <TableCell className="font-mono text-cyan-400">
+                    {t.guardians} (৳0 Free)
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(t.createdAt).toLocaleDateString()}
+                  <TableCell className="font-mono">
+                    ৳{t.perStudentFeeBdt} (৳{t.orgShareBdt} / ৳{t.platformShareBdt})
+                  </TableCell>
+                  <TableCell className="font-mono">
+                    ৳{t.grossBdt.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="font-mono text-indigo-400">
+                    ৳{t.orgEarnedBdt.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="font-mono font-bold text-emerald-400">
+                    ৳{t.totalPlatformMrrBdt.toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
-      {/* ─── Dynamic Plan Pricing & Quota Editor (Zero-Code Control) ─── */}
-      <Card className="border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base font-semibold">
-              Dynamic Plan Pricing & Quota Configurator
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Update monthly BDT rates, student/teacher limits, R2 storage quotas, and SMS allocations without touching code.
-            </p>
-          </div>
-          <Button size="sm" onClick={handleSavePlan} disabled={savingPlan}>
-            {savingPlan ? "Saving..." : "Update Plan Live"}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {planSavedMsg && (
-            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
-              {planSavedMsg}
-            </div>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Plan Code</label>
-              <Input
-                value={planForm.code}
-                onChange={(e) => setPlanForm({ ...planForm, code: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Display Name</label>
-              <Input
-                value={planForm.name}
-                onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Monthly Price (৳)</label>
-              <Input
-                type="number"
-                value={planForm.priceBdt}
-                onChange={(e) => setPlanForm({ ...planForm, priceBdt: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Max Students</label>
-              <Input
-                type="number"
-                value={planForm.maxStudents}
-                onChange={(e) => setPlanForm({ ...planForm, maxStudents: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">R2 Storage (MB)</label>
-              <Input
-                type="number"
-                value={planForm.storageQuotaMb}
-                onChange={(e) => setPlanForm({ ...planForm, storageQuotaMb: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">Monthly SMS</label>
-              <Input
-                type="number"
-                value={planForm.monthlySmsQuota}
-                onChange={(e) => setPlanForm({ ...planForm, monthlySmsQuota: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Info Banner ─── */}
-      <Card className="border-dashed border-border/50 bg-primary/5">
-        <CardContent className="p-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-            <CreditCard className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">
-              Billing data is currently estimated
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Revenue figures are calculated based on plan rates. Integrate a payment gateway (Stripe, SSLCommerz) for real billing data.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

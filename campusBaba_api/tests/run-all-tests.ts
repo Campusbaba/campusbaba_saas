@@ -1347,6 +1347,120 @@ async function main() {
         assert.strictEqual(resolved.gatewayCode, "bkash");
       }
     );
+
+    await runTest(
+      "HTTP-Integration (Tier Quotas, Per-Student 15=5+10 BDT Split & BI Dashboard)",
+      "Individual Tutor (1 teacher, unlimited students, 15=5+10 BDT split), SME Coaching (10 teachers), Campus Connect, Guardian/Class quotas, and BI telemetry",
+      async () => {
+        const saToken = jwt.sign(
+          { id: "sa-1", email: "owner@campusbaba.com", role: "superadmin" },
+          globalAppContainer.config.auth.accessSecret
+        );
+
+        // 1. Verify built-in subscription tiers (Individual Tutor, SME Coaching, Campus Connect)
+        const plansRes = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/superadmin/plans",
+        });
+        assert.strictEqual(plansRes.status, 200);
+        const tutorPlan = plansRes.body.data.find(
+          (p: any) => p.code === "individual_tutor"
+        );
+        const smePlan = plansRes.body.data.find(
+          (p: any) => p.code === "sme_coaching"
+        );
+        const campusPlan = plansRes.body.data.find(
+          (p: any) => p.code === "campus_connect"
+        );
+        assert.ok(tutorPlan, "individual_tutor plan exists");
+        assert.strictEqual(tutorPlan.maxTeachers, 1);
+        assert.strictEqual(tutorPlan.maxStudents, -1); // Unlimited students
+        assert.strictEqual(tutorPlan.maxGuardians, -1); // Unlimited free guardians
+        assert.strictEqual(tutorPlan.perStudentFeeBdt, 15);
+        assert.strictEqual(tutorPlan.orgStudentShareBdt, 5);
+        assert.strictEqual(tutorPlan.platformStudentShareBdt, 10);
+        assert.strictEqual(tutorPlan.guardianPortalFree, true);
+
+        assert.ok(smePlan, "sme_coaching plan exists");
+        assert.strictEqual(smePlan.maxTeachers, 10);
+
+        assert.ok(campusPlan, "campus_connect plan exists");
+
+        // 2. Unlimited (-1) Student & Guardian quota passes even with 50,000 students, while Teacher cap (1) blocks 2nd teacher
+        globalAppContainer.platformSaas.reserveQuotaSlot({
+          tenantKey: "tutor-demo",
+          resource: "students",
+          currentCountInDb: 50000,
+          limit: -1, // Unlimited
+        });
+        globalAppContainer.platformSaas.reserveQuotaSlot({
+          tenantKey: "tutor-demo",
+          resource: "guardians",
+          currentCountInDb: 50000,
+          limit: -1, // Unlimited free guardians
+        });
+        assert.throws(
+          () =>
+            globalAppContainer.platformSaas.reserveQuotaSlot({
+              tenantKey: "tutor-demo",
+              resource: "teachers",
+              currentCountInDb: 1,
+              limit: 1, // Individual Tutor strictly 1 teacher
+            }),
+          /maximum 1 active teachers allowed/
+        );
+        assert.throws(
+          () =>
+            globalAppContainer.platformSaas.reserveQuotaSlot({
+              tenantKey: "tutor-demo",
+              resource: "classes",
+              currentCountInDb: 20,
+              limit: 20,
+            }),
+          /maximum 20 active classes allowed/
+        );
+
+        // 3. SuperAdmin updates per-organization quotas & custom per-student fee split via PUT /api/v1/superadmin/tenants/:id
+        const updateOrgRes = await httpRequest(port, {
+          method: "PUT",
+          path: "/api/v1/superadmin/tenants/dhakamodel",
+          headers: { Authorization: `Bearer ${saToken}` },
+          body: {
+            billingPlan: "campus_connect",
+            maxStudents: -1,
+            maxGuardians: -1,
+            maxTeachers: 60,
+            maxClasses: 40,
+            perStudentFeeBdt: 15,
+            orgStudentShareBdt: 5,
+            platformStudentShareBdt: 10,
+            guardianMultiStudentAllowed: true,
+          },
+        });
+        assert.strictEqual(updateOrgRes.status, 200);
+        assert.strictEqual(updateOrgRes.body.data.maxStudents, -1);
+        assert.strictEqual(updateOrgRes.body.data.maxClasses, 40);
+        assert.strictEqual(updateOrgRes.body.data.perStudentFeeBdt, 15);
+        assert.strictEqual(updateOrgRes.body.data.orgStudentShareBdt, 5);
+        assert.strictEqual(updateOrgRes.body.data.platformStudentShareBdt, 10);
+
+        // 4. SuperAdmin BI Dashboard Stats returns aggregated students, free guardians, classes, and 15=5+10 BDT revenue split
+        const biRes = await httpRequest(port, {
+          method: "GET",
+          path: "/api/v1/superadmin/dashboard-stats",
+          headers: { Authorization: `Bearer ${saToken}` },
+        });
+        assert.strictEqual(biRes.status, 200);
+        assert.ok(biRes.body.data.totalStudents > 0);
+        assert.ok(biRes.body.data.totalGuardians > 0);
+        assert.ok(biRes.body.data.totalClasses > 0);
+        assert.strictEqual(biRes.body.data.financialBi.guardianPortalRevenueBdt, 0);
+        assert.ok(biRes.body.data.financialBi.grossPerStudentCollectionsBdt > 0);
+        assert.ok(biRes.body.data.financialBi.orgRetainedShareBdt > 0);
+        assert.ok(biRes.body.data.financialBi.platformStudentRevenueBdt > 0);
+        assert.ok(Array.isArray(biRes.body.data.orgBreakdown));
+      }
+    );
   } finally {
     server.close();
   }

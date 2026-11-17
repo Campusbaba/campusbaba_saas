@@ -1,16 +1,35 @@
 import { Request, Response } from "express";
-import { Parent  } from "../models";
-import { Student  } from "../models";
-import { nextSequence  } from "../models";
+import { Parent, Student, nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
   getPaginationParams,
   createPaginationResult,
 } from "../utils/pagination";
+import { container } from "../composition/container";
 
 export const createParent = asyncHandler(
   async (req: Request, res: Response) => {
+    const tenantKey = req.tenant?.subdomain || req.resolvedTenantSlug;
+    if (tenantKey) {
+      const saasTenant = container.platformSaas.getTenant(tenantKey);
+      const maxGuardians =
+        (req.tenant as any)?.maxGuardians ??
+        saasTenant?.maxGuardians ??
+        -1;
+      const currentGuardians = await Parent.countDocuments().catch(() => 0);
+      try {
+        container.platformSaas.reserveQuotaSlot({
+          tenantKey,
+          resource: "guardians",
+          currentCountInDb: currentGuardians,
+          limit: maxGuardians,
+        });
+      } catch (err: any) {
+        throw new AppError(403, err.message);
+      }
+    }
+
     const seq = await nextSequence("parent");
     const parentId = `PAR-${String(seq).padStart(4, "0")}`;
     const parent = await Parent.create({ ...req.body, parentId });

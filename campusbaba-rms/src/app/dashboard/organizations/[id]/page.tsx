@@ -109,13 +109,20 @@ export default function OrganizationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Quota Editable fields
+  // Quota & Per-Student Pricing Editable fields
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
-    maxStudents: 0,
-    maxTeachers: 0,
-    maxAdmins: 0,
-    billingPlan: "",
+    maxStudents: -1,
+    maxGuardians: -1,
+    maxTeachers: 10,
+    maxClasses: 50,
+    maxAdmins: 3,
+    billingPlan: "campus_connect",
+    perStudentFeeBdt: 15,
+    orgStudentShareBdt: 5,
+    platformStudentShareBdt: 10,
+    guardianPortalFree: true,
+    guardianMultiStudentAllowed: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -154,10 +161,17 @@ export default function OrganizationDetailPage() {
       setData(response.data);
       const t = response.data.tenant;
       setEditForm({
-        maxStudents: t.maxStudents,
-        maxTeachers: t.maxTeachers,
-        maxAdmins: t.maxAdmins,
-        billingPlan: t.billingPlan,
+        maxStudents: t.maxStudents ?? -1,
+        maxGuardians: t.maxGuardians ?? -1,
+        maxTeachers: t.maxTeachers ?? 10,
+        maxClasses: t.maxClasses ?? 50,
+        maxAdmins: t.maxAdmins ?? 3,
+        billingPlan: t.billingPlan || "campus_connect",
+        perStudentFeeBdt: t.perStudentFeeBdt ?? 15,
+        orgStudentShareBdt: t.orgStudentShareBdt ?? 5,
+        platformStudentShareBdt: t.platformStudentShareBdt ?? 10,
+        guardianPortalFree: t.guardianPortalFree ?? true,
+        guardianMultiStudentAllowed: t.guardianMultiStudentAllowed ?? true,
       });
 
       if (t.subdomain) {
@@ -305,17 +319,31 @@ export default function OrganizationDetailPage() {
   if (!data) return null;
 
   const { tenant, analytics, lists } = data;
-  const studentPercent = Math.min(
-    100,
-    (analytics.currentStudents / tenant.maxStudents) * 100
-  );
-  const teacherPercent = Math.min(
-    100,
-    (analytics.currentTeachers / tenant.maxTeachers) * 100
-  );
+  const studentPercent =
+    tenant.maxStudents === -1
+      ? 10
+      : Math.min(100, (analytics.currentStudents / Math.max(1, tenant.maxStudents)) * 100);
+  const guardianPercent =
+    (tenant.maxGuardians ?? -1) === -1
+      ? 10
+      : Math.min(
+          100,
+          ((analytics.currentGuardians || 0) / Math.max(1, tenant.maxGuardians)) * 100
+        );
+  const teacherPercent =
+    tenant.maxTeachers === -1
+      ? 10
+      : Math.min(100, (analytics.currentTeachers / Math.max(1, tenant.maxTeachers)) * 100);
+  const classPercent =
+    (tenant.maxClasses ?? 50) === -1
+      ? 10
+      : Math.min(
+          100,
+          ((analytics.currentClasses || 0) / Math.max(1, tenant.maxClasses ?? 50)) * 100
+        );
   const employeePercent = Math.min(
     100,
-    (analytics.currentEmployees / tenant.maxAdmins) * 100
+    (analytics.currentEmployees / Math.max(1, tenant.maxAdmins)) * 100
   );
 
   return (
@@ -406,62 +434,100 @@ export default function OrganizationDetailPage() {
         </div>
       </div>
 
-      {/* ─── Quota Usage ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* ─── Quota Usage (Students, Guardians, Teachers, Classes, Admins) ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card className="border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium">Students</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Students</CardTitle>
             <GraduationCap className="h-4 w-4 text-indigo-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {analytics.currentStudents}{" "}
-              <span className="text-sm text-muted-foreground font-normal">
-                / {tenant.maxStudents}
+              <span className="text-xs text-muted-foreground font-normal">
+                / {tenant.maxStudents === -1 ? "Unlimited (∞)" : tenant.maxStudents}
               </span>
             </div>
-            <Progress value={studentPercent} className="mt-3 h-2" />
-            <p className="text-xs text-muted-foreground mt-2">
-              {studentPercent.toFixed(0)}% capacity used
+            <Progress value={studentPercent} className="mt-2.5 h-1.5" />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              ৳{tenant.perStudentFeeBdt ?? 15}/stu (৳{tenant.orgStudentShareBdt ?? 5} Org / ৳{tenant.platformStudentShareBdt ?? 10} Ours)
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium">Teachers</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Guardians (Free Portal)</CardTitle>
+            <Users className="h-4 w-4 text-cyan-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold">
+              {analytics.currentGuardians || 0}{" "}
+              <span className="text-xs text-muted-foreground font-normal">
+                / {(tenant.maxGuardians ?? -1) === -1 ? "Unlimited (∞)" : tenant.maxGuardians}
+              </span>
+            </div>
+            <Progress value={guardianPercent} className="mt-2.5 h-1.5" />
+            <p className="text-[11px] text-emerald-400 mt-1.5">
+              {tenant.guardianMultiStudentAllowed !== false
+                ? "1 Guardian → Multiple Students"
+                : "Strict 1 Guardian : 1 Student"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Teachers</CardTitle>
             <Briefcase className="h-4 w-4 text-violet-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {analytics.currentTeachers}{" "}
-              <span className="text-sm text-muted-foreground font-normal">
-                / {tenant.maxTeachers}
+              <span className="text-xs text-muted-foreground font-normal">
+                / {tenant.maxTeachers === -1 ? "Unlimited (∞)" : tenant.maxTeachers}
               </span>
             </div>
-            <Progress value={teacherPercent} className="mt-3 h-2" />
-            <p className="text-xs text-muted-foreground mt-2">
-              {teacherPercent.toFixed(0)}% capacity used
+            <Progress value={teacherPercent} className="mt-2.5 h-1.5" />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {tenant.maxTeachers === -1 ? "Unlimited" : `${teacherPercent.toFixed(0)}% capacity used`}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium">
-              Admins / Employees
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Classes / Batches</CardTitle>
+            <Database className="h-4 w-4 text-amber-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold">
+              {analytics.currentClasses || 0}{" "}
+              <span className="text-xs text-muted-foreground font-normal">
+                / {(tenant.maxClasses ?? 50) === -1 ? "Unlimited (∞)" : tenant.maxClasses ?? 50}
+              </span>
+            </div>
+            <Progress value={classPercent} className="mt-2.5 h-1.5" />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {(tenant.maxClasses ?? 50) === -1 ? "Unlimited" : `${classPercent.toFixed(0)}% capacity used`}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium">Admins / Staff</CardTitle>
             <UserCheck className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {analytics.currentEmployees}{" "}
-              <span className="text-sm text-muted-foreground font-normal">
+              <span className="text-xs text-muted-foreground font-normal">
                 / {tenant.maxAdmins}
               </span>
             </div>
-            <Progress value={employeePercent} className="mt-3 h-2" />
-            <p className="text-xs text-muted-foreground mt-2">
+            <Progress value={employeePercent} className="mt-2.5 h-1.5" />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
               {employeePercent.toFixed(0)}% capacity used
             </p>
           </CardContent>
@@ -640,12 +706,17 @@ export default function OrganizationDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Quota Controls */}
+        {/* Quota & Per-Student Revenue Split Controls */}
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold">
-              Quota & Plan Configuration
-            </CardTitle>
+            <div>
+              <CardTitle className="text-base font-semibold">
+                Quotas, Tier Limits & Per-Student Pricing Split
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Set `-1` for Unlimited. Guardian portal is always free.
+              </p>
+            </div>
             {!editMode ? (
               <Button
                 variant="outline"
@@ -653,7 +724,7 @@ export default function OrganizationDetailPage() {
                 onClick={() => setEditMode(true)}
               >
                 <Save className="h-3.5 w-3.5 mr-1.5" />
-                Edit Quotas
+                Edit Quotas & Pricing
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -676,10 +747,76 @@ export default function OrganizationDetailPage() {
             )}
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  Max Students
+                  Subscription Tier
+                </Label>
+                <Select
+                  value={editForm.billingPlan}
+                  onValueChange={(val) => {
+                    const nextPlan = val || "campus_connect";
+                    const presets: Record<string, Partial<typeof editForm>> = {
+                      individual_tutor: {
+                        maxTeachers: 1,
+                        maxStudents: -1,
+                        maxGuardians: -1,
+                        maxClasses: 20,
+                        perStudentFeeBdt: 15,
+                        orgStudentShareBdt: 5,
+                        platformStudentShareBdt: 10,
+                      },
+                      sme_coaching: {
+                        maxTeachers: 10,
+                        maxStudents: -1,
+                        maxGuardians: -1,
+                        maxClasses: 60,
+                        perStudentFeeBdt: 15,
+                        orgStudentShareBdt: 5,
+                        platformStudentShareBdt: 10,
+                      },
+                      campus_connect: {
+                        maxTeachers: 100,
+                        maxStudents: -1,
+                        maxGuardians: -1,
+                        maxClasses: 150,
+                        perStudentFeeBdt: 15,
+                        orgStudentShareBdt: 5,
+                        platformStudentShareBdt: 10,
+                      },
+                    };
+                    setEditForm({
+                      ...editForm,
+                      billingPlan: nextPlan,
+                      ...(presets[nextPlan] || {}),
+                    });
+                  }}
+                  disabled={!editMode}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual_tutor">
+                      Individual Tutor (1 Teacher, ∞ Students)
+                    </SelectItem>
+                    <SelectItem value="sme_coaching">
+                      SME Coaching Plan (10 Teachers)
+                    </SelectItem>
+                    <SelectItem value="campus_connect">
+                      Campus Connect (Schools & Colleges)
+                    </SelectItem>
+                    <SelectItem value="starter">Starter School</SelectItem>
+                    <SelectItem value="postpaid">Standard Postpaid</SelectItem>
+                    <SelectItem value="prepaid">Standard Prepaid</SelectItem>
+                    <SelectItem value="coaching_pro">Coaching Pro</SelectItem>
+                    <SelectItem value="enterprise">Enterprise Suite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Max Students (-1 = ∞)
                 </Label>
                 <Input
                   type="number"
@@ -688,6 +825,23 @@ export default function OrganizationDetailPage() {
                     setEditForm({
                       ...editForm,
                       maxStudents: +e.target.value,
+                    })
+                  }
+                  disabled={!editMode}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Max Guardians (-1 = ∞ Free)
+                </Label>
+                <Input
+                  type="number"
+                  value={editForm.maxGuardians}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      maxGuardians: +e.target.value,
                     })
                   }
                   disabled={!editMode}
@@ -713,7 +867,24 @@ export default function OrganizationDetailPage() {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  Max Admins
+                  Max Classes / Batches
+                </Label>
+                <Input
+                  type="number"
+                  value={editForm.maxClasses}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      maxClasses: +e.target.value,
+                    })
+                  }
+                  disabled={!editMode}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Max Admins / Staff
                 </Label>
                 <Input
                   type="number"
@@ -728,29 +899,88 @@ export default function OrganizationDetailPage() {
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            {/* Per-Student Revenue Split Controls */}
+            <div className="pt-3 border-t border-border/40 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  Billing Plan
+                  Per-Student Total Charge (৳)
                 </Label>
-                <Select
-                  value={editForm.billingPlan}
-                  onValueChange={(val) =>
-                    setEditForm({ ...editForm, billingPlan: val || "postpaid" })
+                <Input
+                  type="number"
+                  value={editForm.perStudentFeeBdt}
+                  onChange={(e) => {
+                    const total = +e.target.value;
+                    const orgShare = editForm.orgStudentShareBdt;
+                    setEditForm({
+                      ...editForm,
+                      perStudentFeeBdt: total,
+                      platformStudentShareBdt: Math.max(0, total - orgShare),
+                    });
+                  }}
+                  disabled={!editMode}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  Organization Share (৳)
+                </Label>
+                <Input
+                  type="number"
+                  value={editForm.orgStudentShareBdt}
+                  onChange={(e) => {
+                    const orgShare = +e.target.value;
+                    setEditForm({
+                      ...editForm,
+                      orgStudentShareBdt: orgShare,
+                      platformStudentShareBdt: Math.max(
+                        0,
+                        editForm.perStudentFeeBdt - orgShare
+                      ),
+                    });
+                  }}
+                  disabled={!editMode}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">
+                  CampusBaba Share (৳ Ours)
+                </Label>
+                <Input
+                  type="number"
+                  value={editForm.platformStudentShareBdt}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      platformStudentShareBdt: +e.target.value,
+                    })
                   }
                   disabled={!editMode}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="postpaid">Postpaid</SelectItem>
-                    <SelectItem value="prepaid">Prepaid</SelectItem>
-                    <SelectItem value="coaching_pro">Coaching Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
+                  className="mt-1"
+                />
               </div>
+            </div>
+
+            {/* Guardian Portal Multi-Student Policy */}
+            <div className="pt-2 flex items-center justify-between text-xs p-2.5 rounded-lg border border-border/50 bg-secondary/20">
+              <div>
+                <p className="font-semibold">
+                  Guardian Multi-Student Monitoring (Free Guardian Portal)
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  When enabled, one Guardian account can monitor multiple siblings. When disabled, enforces 1 Guardian : 1 Student.
+                </p>
+              </div>
+              <Switch
+                checked={editForm.guardianMultiStudentAllowed}
+                disabled={!editMode}
+                onCheckedChange={(v) =>
+                  setEditForm({ ...editForm, guardianMultiStudentAllowed: v })
+                }
+              />
             </div>
           </CardContent>
         </Card>

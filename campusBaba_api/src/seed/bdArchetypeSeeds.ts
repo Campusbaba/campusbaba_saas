@@ -46,6 +46,16 @@ export const BD_ARCHETYPE_TENANTS: DemoTenantSeedSummary[] = [
 export function seedBangladeshArchetypeTenants(
   appContainer: AppContainer
 ): DemoTenantSeedSummary[] {
+  const demoCounts: Record<
+    string,
+    { students: number; guardians: number; teachers: number; classes: number; admins: number }
+  > = {
+    dhakamodel: { students: 420, guardians: 390, teachers: 28, classes: 18, admins: 4 },
+    chittagongcollege: { students: 950, guardians: 880, teachers: 54, classes: 32, admins: 8 },
+    darululoom: { students: 310, guardians: 295, teachers: 22, classes: 14, admins: 3 },
+    udvashbatch: { students: 680, guardians: 640, teachers: 10, classes: 24, admins: 4 },
+  };
+
   for (const archetype of BD_ARCHETYPE_TENANTS) {
     appContainer.platformSaas.registerTenantRecord({
       name: archetype.name,
@@ -53,6 +63,12 @@ export function seedBangladeshArchetypeTenants(
       billingPlan: archetype.planCode,
       institutionType: archetype.institutionType,
     });
+    if (demoCounts[archetype.slug]) {
+      appContainer.platformSaas.setActiveCounts(
+        archetype.slug,
+        demoCounts[archetype.slug]
+      );
+    }
 
     if (archetype.institutionType === "coaching") {
       appContainer.bdModules.createCoachingBatch(archetype.slug, {
