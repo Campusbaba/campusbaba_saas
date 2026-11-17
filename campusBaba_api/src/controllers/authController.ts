@@ -210,62 +210,47 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   const { email, role, referenceId } = consumed;
 
-  // When registering inside a Mongo-backed tenant, also persist the User document
-  if (req.tenantConnection) {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      throw new AppError(400, "User with this email already exists");
-    }
-
-    let referenceExists = false;
-    switch (role) {
-      case "teacher":
-        referenceExists = !!(await Teacher.findById(referenceId));
-        break;
-      case "student":
-        referenceExists = !!(await Student.findById(referenceId));
-        break;
-      case "parent":
-        referenceExists = !!(await Parent.findById(referenceId));
-        break;
-      case "employee":
-      case "admin":
-        referenceExists = !!(await Employee.findById(referenceId));
-        break;
-    }
-
-    if (!referenceExists) {
-      throw new AppError(404, `${role} profile not found`);
-    }
-
-    const user = await User.create({
-      email,
-      password,
-      role,
-      referenceId,
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        tenantId: activeTenantId,
-      },
-    });
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new AppError(400, "User with this email already exists");
   }
+
+  let referenceExists = false;
+  switch (role) {
+    case "teacher":
+      referenceExists = !!(await Teacher.findById(referenceId));
+      break;
+    case "student":
+      referenceExists = !!(await Student.findById(referenceId));
+      break;
+    case "parent":
+      referenceExists = !!(await Parent.findById(referenceId));
+      break;
+    case "employee":
+    case "admin":
+      referenceExists = !!(await Employee.findById(referenceId));
+      break;
+  }
+
+  // Persist user membership in PostgreSQL RLS tenant_memberships
+  const user = await User.create({
+    email,
+    password,
+    role,
+    referenceId,
+    isActive: true,
+  });
 
   res.status(201).json({
     success: true,
     message: "User registered successfully",
     data: {
-      id: consumed.invitationId,
+      id: user._id || consumed.invitationId,
       email,
       role,
       referenceId,
       tenantId: activeTenantId,
+      profileVerified: referenceExists,
     },
   });
 });
@@ -340,7 +325,8 @@ export const getCurrentUser = asyncHandler(
       throw new AppError(status, err.message || "Invalid or expired token");
     }
 
-    if (!req.tenantConnection) {
+    const user = await User.findById(decoded.id);
+    if (!user) {
       return res.status(200).json({
         success: true,
         data: {
@@ -352,9 +338,7 @@ export const getCurrentUser = asyncHandler(
         },
       });
     }
-
-    const user = await User.findById(decoded.id);
-    if (!user || !user.isActive) {
+    if (!user.isActive) {
       throw new AppError(401, "User not found or inactive");
     }
 

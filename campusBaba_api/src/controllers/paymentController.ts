@@ -1,8 +1,7 @@
-import mongoose from "mongoose";
 import { Request, Response } from "express";
-import { Payment  } from "../models";
-import { Student  } from "../models";
-import { nextSequence  } from "../models";
+import { Payment } from "../models";
+import { Student } from "../models";
+import { nextSequence } from "../models";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { AppError } from "../middlewares/errorHandler";
 import {
@@ -192,7 +191,7 @@ export const getStudentPayments = asyncHandler(
       .sort("-dueDate");
 
     const summary = await Payment.aggregate([
-      { $match: { studentId: new mongoose.Types.ObjectId(studentId) } },
+      { $match: { studentId } },
       {
         $group: {
           _id: "$paymentStatus",
@@ -224,8 +223,7 @@ export const getEnrolledStudents = asyncHandler(
 
     const match: any = {};
     if (paymentStatus) match.paymentStatus = paymentStatus;
-    if (courseId)
-      match.courseId = new mongoose.Types.ObjectId(courseId as string);
+    if (courseId) match.courseId = String(courseId);
     if (academicYear) match.academicYear = academicYear;
     if (semester) match.semester = semester;
 

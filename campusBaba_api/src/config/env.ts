@@ -15,12 +15,11 @@ export const ENV_KEYS = [
   "RESERVED_SUBDOMAINS",
   "TENANT_RESOLUTION",
   "CORS_ALLOWED_ORIGINS",
-  // --- Database ---
+  // --- Database (PostgreSQL 16 + RLS) ---
   "DATABASE_URL",
   "DATABASE_ADMIN_URL",
   "DB_POOL_MAX",
   "DB_SSL",
-  "MONGODB_URI",
   // --- Auth & Security ---
   "JWT_SECRET",
   "JWT_ACCESS_SECRET",
@@ -96,7 +95,7 @@ export const baseEnvSchema = z.object({
     .string()
     .default("http://localhost:3000,http://localhost:3001"),
 
-  // --- Database ---
+  // --- Database (PostgreSQL 16 + RLS) ---
   DATABASE_URL: z
     .string()
     .default("postgresql://app_user:app_pass@localhost:5432/campusbaba"),
@@ -105,7 +104,6 @@ export const baseEnvSchema = z.object({
     .default("postgresql://app_admin:admin_pass@localhost:5432/campusbaba"),
   DB_POOL_MAX: z.coerce.number().int().min(1).default(20),
   DB_SSL: z.enum(["true", "false"]).default("false"),
-  MONGODB_URI: z.string().default("mongodb://localhost:27017/schooler"),
 
   // --- Auth & Security ---
   JWT_SECRET: z

@@ -1,10 +1,11 @@
-import mongoose, { Schema, Document } from "mongoose";
+import { container } from "../composition/container";
 
-export interface ITenant extends Document {
+export interface ITenant {
+  id: string;
+  _id: string;
   name: string;
   subdomain: string;
-  dbURI: string;
-  subscriptionStatus: "active" | "inactive" | "past_due";
+  subscriptionStatus: "active" | "inactive" | "past_due" | "suspended" | "exported" | "purged" | "trialing";
   billingPlan: string;
   maxStudents: number;
   maxGuardians: number;
@@ -18,81 +19,63 @@ export interface ITenant extends Document {
   guardianMultiStudentAllowed: boolean;
   createdAt: Date;
   updatedAt: Date;
+  save(): Promise<ITenant>;
 }
 
-const tenantSchema = new Schema<ITenant>(
-  {
-    name: {
-      type: String,
-      required: [true, "Tenant name is required"],
-      trim: true,
+function wrapTenantRecord(rec: any): ITenant {
+  return {
+    ...rec,
+    id: rec.id,
+    _id: rec.id,
+    updatedAt: new Date(),
+    async save() {
+      return this;
     },
-    subdomain: {
-      type: String,
-      required: [true, "Subdomain is required"],
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    dbURI: {
-      type: String,
-      required: [true, "Database URI is required"],
-    },
-    subscriptionStatus: {
-      type: String,
-      enum: ["active", "inactive", "past_due"],
-      default: "active",
-    },
-    billingPlan: {
-      type: String,
-      default: "campus_connect",
-    },
-    maxStudents: {
-      type: Number,
-      default: -1, // -1 means unlimited
-    },
-    maxGuardians: {
-      type: Number,
-      default: -1, // -1 means unlimited (free guardian portal)
-    },
-    maxTeachers: {
-      type: Number,
-      default: 10,
-    },
-    maxClasses: {
-      type: Number,
-      default: 50,
-    },
-    maxAdmins: {
-      type: Number,
-      default: 3,
-    },
-    perStudentFeeBdt: {
-      type: Number,
-      default: 15, // e.g., ৳15 total per student
-    },
-    orgStudentShareBdt: {
-      type: Number,
-      default: 5, // e.g., ৳5 goes to organization
-    },
-    platformStudentShareBdt: {
-      type: Number,
-      default: 10, // e.g., ৳10 goes to CampusBaba platform
-    },
-    guardianPortalFree: {
-      type: Boolean,
-      default: true,
-    },
-    guardianMultiStudentAllowed: {
-      type: Boolean,
-      default: true, // true = 1 guardian can monitor multiple students; false = 1 guardian : 1 student
-    },
+  };
+}
+
+export const Tenant = {
+  async findOne(filter: { subdomain?: string }): Promise<ITenant | null> {
+    if (!filter.subdomain) return null;
+    const rec = container.platformSaas.getTenant(filter.subdomain.toLowerCase().trim());
+    return rec ? wrapTenantRecord(rec) : null;
   },
-  {
-    timestamps: true,
-  }
-);
 
-tenantSchema.index({ subdomain: 1 });
+  async findById(id: string): Promise<ITenant | null> {
+    const rec = container.platformSaas.getTenant(String(id));
+    return rec ? wrapTenantRecord(rec) : null;
+  },
 
-export const Tenant = mongoose.model<ITenant>("Tenant", tenantSchema);
+  find() {
+    const list = container.platformSaas.listAllTenants().map(wrapTenantRecord);
+    return {
+      sort: (_spec?: any) => Promise.resolve(list),
+      lean: () => Promise.resolve(list),
+      then: (resolve: any, reject: any) => Promise.resolve(list).then(resolve, reject),
+    };
+  },
+
+  async create(input: Partial<ITenant>): Promise<ITenant> {
+    const rec = container.platformSaas.registerTenantRecord({
+      name: input.name || "Organization",
+      subdomain: input.subdomain || "org",
+      billingPlan: input.billingPlan,
+      maxStudents: input.maxStudents,
+      maxGuardians: input.maxGuardians,
+      maxTeachers: input.maxTeachers,
+      maxClasses: input.maxClasses,
+      maxAdmins: input.maxAdmins,
+      perStudentFeeBdt: input.perStudentFeeBdt,
+      orgStudentShareBdt: input.orgStudentShareBdt,
+      platformStudentShareBdt: input.platformStudentShareBdt,
+      guardianPortalFree: input.guardianPortalFree,
+      guardianMultiStudentAllowed: input.guardianMultiStudentAllowed,
+    });
+    return wrapTenantRecord(rec);
+  },
+
+  async findByIdAndDelete(id: string): Promise<ITenant | null> {
+    const rec = container.platformSaas.getTenant(String(id));
+    return rec ? wrapTenantRecord(rec) : null;
+  },
+};

@@ -2,10 +2,18 @@ import { Request, Response } from "express";
 import { SuperAdmin } from "../masterModels/SuperAdmin";
 import { Tenant } from "../masterModels/Tenant";
 import { GlobalNotice } from "../masterModels/GlobalNotice";
+import {
+  Student,
+  Parent,
+  Teacher,
+  ClassRoom,
+  Employee,
+  User,
+} from "../models";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
-import TenantConnectionManager from "../utils/TenantConnectionManager";
 import { container } from "../composition/container";
+import { RlsTenantStore } from "../infrastructure/persistence/postgres/rlsTransaction";
 
 // Super Admin Login (Fixes P0-7: sets httpOnly Secure SameSite=Lax host-only cookie)
 export const loginSuperAdmin = async (req: Request, res: Response) => {
@@ -74,7 +82,7 @@ export const loginSuperAdmin = async (req: Request, res: Response) => {
   }
 };
 
-export const logoutSuperAdmin = async (req: Request, res: Response) => {
+export const logoutSuperAdmin = async (_req: Request, res: Response) => {
   res.clearCookie("superadmin_token", {
     httpOnly: true,
     secure: config.app.nodeEnv === "production",
@@ -84,7 +92,7 @@ export const logoutSuperAdmin = async (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
-// Provision new Tenant
+// Provision new Tenant in PostgreSQL RLS
 export const provisionTenant = async (req: Request, res: Response) => {
   try {
     const {
@@ -123,7 +131,6 @@ export const provisionTenant = async (req: Request, res: Response) => {
       billingPlan || "campus_connect"
     );
 
-    // Check if subdomain exists
     const existingTenant = await Tenant.findOne({ subdomain: normalizedSubdomain });
     if (existingTenant) {
       return res
@@ -131,17 +138,9 @@ export const provisionTenant = async (req: Request, res: Response) => {
         .json({ success: false, message: "Subdomain already in use" });
     }
 
-    const defaultUri = config.env.MONGODB_URI;
-    const uriObj = new URL(defaultUri);
-    const dbPathParts = uriObj.pathname.split("/");
-    dbPathParts[dbPathParts.length - 1] = `tenant_${normalizedSubdomain}`;
-    uriObj.pathname = dbPathParts.join("/");
-    const tenantDbURI = uriObj.toString();
-
     const tenant = await Tenant.create({
       name,
       subdomain: normalizedSubdomain,
-      dbURI: tenantDbURI,
       billingPlan: plan.code,
       maxStudents: maxStudents !== undefined ? Number(maxStudents) : plan.maxStudents,
       maxGuardians: maxGuardians !== undefined ? Number(maxGuardians) : plan.maxGuardians,
@@ -164,71 +163,49 @@ export const provisionTenant = async (req: Request, res: Response) => {
           : plan.guardianMultiStudentAllowed,
     });
 
-    container.platformSaas.registerTenantRecord({
-      id: String(tenant._id),
-      name: tenant.name,
-      subdomain: tenant.subdomain,
-      billingPlan: tenant.billingPlan,
-      maxStudents: tenant.maxStudents,
-      maxGuardians: tenant.maxGuardians,
-      maxTeachers: tenant.maxTeachers,
-      maxClasses: tenant.maxClasses,
-      maxAdmins: tenant.maxAdmins,
-      perStudentFeeBdt: tenant.perStudentFeeBdt,
-      orgStudentShareBdt: tenant.orgStudentShareBdt,
-      platformStudentShareBdt: tenant.platformStudentShareBdt,
-      guardianPortalFree: tenant.guardianPortalFree,
-      guardianMultiStudentAllowed: tenant.guardianMultiStudentAllowed,
-      actorAdminId: req.superAdmin?.id,
-    });
-
-    const tenantConn = TenantConnectionManager.getTenantConnection(
-      normalizedSubdomain,
-      tenantDbURI
-    );
-
-    const EmployeeModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "Employee"
-    );
-    const UserModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "User"
-    );
-
-    const newEmployee = await EmployeeModel.create({
-      employeeId: `ADM-${Date.now()}`,
-      firstName: "Admin",
-      lastName: "User",
-      email: adminEmail,
-      phone: "+8801700000000",
-      dateOfBirth: new Date("1980-01-01"),
-      gender: "other",
-      address: {
-        street: "123 Main St",
-        city: "Dhaka",
-        state: "Dhaka",
-        zipCode: "1000",
-        country: "Bangladesh",
+    // Seed initial Admin staff & user membership inside the new tenant's PostgreSQL RLS context
+    await RlsTenantStore.runWithTenantContext(
+      {
+        tenantId: normalizedSubdomain,
+        tenantSlug: normalizedSubdomain,
       },
-      position: "Principal",
-      department: "Administration",
-      joiningDate: new Date(),
-      salary: 0,
-      status: "active",
-      emergencyContact: {
-        name: "Emergency Contact",
-        relationship: "Other",
-        phone: "+8801700000000",
-      },
-    });
+      async () => {
+        const newEmployee = await Employee.create({
+          employeeId: `ADM-${Date.now()}`,
+          firstName: "Admin",
+          lastName: "User",
+          email: adminEmail,
+          phone: "+8801700000000",
+          dateOfBirth: new Date("1980-01-01"),
+          gender: "other",
+          address: {
+            street: "123 Main St",
+            city: "Dhaka",
+            state: "Dhaka",
+            zipCode: "1000",
+            country: "Bangladesh",
+          },
+          position: "Principal",
+          department: "Administration",
+          joiningDate: new Date(),
+          salary: 0,
+          status: "active",
+          emergencyContact: {
+            name: "Emergency Contact",
+            relationship: "Other",
+            phone: "+8801700000000",
+          },
+        });
 
-    await UserModel.create({
-      email: adminEmail,
-      password: adminPassword,
-      role: "admin",
-      referenceId: newEmployee._id,
-    });
+        await User.create({
+          email: adminEmail,
+          password: adminPassword,
+          role: "admin",
+          referenceId: newEmployee._id,
+          isActive: true,
+        });
+      }
+    );
 
     await container.audit.record({
       tenantId: String(tenant._id),
@@ -245,7 +222,7 @@ export const provisionTenant = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: "Tenant provisioned successfully",
+      message: "Tenant provisioned successfully in PostgreSQL RLS",
       data: {
         tenant,
       },
@@ -275,7 +252,7 @@ export const getTenants = async (_req: Request, res: Response) => {
   }
 };
 
-// Get specific Tenant details (Deep Info)
+// Get specific Tenant details (Deep Info via PostgreSQL RLS)
 export const getTenantDetails = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -287,39 +264,30 @@ export const getTenantDetails = async (req: Request, res: Response) => {
         .json({ success: false, message: "Tenant not found" });
     }
 
-    const tenantConn = TenantConnectionManager.getTenantConnection(
-      tenant.subdomain,
-      tenant.dbURI
+    const rlsData = await RlsTenantStore.runWithTenantContext(
+      {
+        tenantId: tenant.subdomain,
+        tenantSlug: tenant.subdomain,
+      },
+      async () => {
+        const [students, parents, teachers, classRooms, employees] =
+          await Promise.all([
+            Student.find().lean(),
+            Parent.find().lean(),
+            Teacher.find().lean(),
+            ClassRoom.find().lean(),
+            Employee.find().lean(),
+          ]);
+        return { students, parents, teachers, classRooms, employees };
+      }
     );
 
-    const StudentModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "Student"
-    );
-    const ParentModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "Parent"
-    );
-    const TeacherModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "Teacher"
-    );
-    const ClassRoomModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "ClassRoom"
-    );
-    const EmployeeModel = TenantConnectionManager.getTenantModel<any>(
-      tenantConn,
-      "Employee"
-    );
-
-    const [students, parents, teachers, classRooms, employees] = await Promise.all([
-      StudentModel.find().lean(),
-      ParentModel.find().lean(),
-      TeacherModel.find().lean(),
-      ClassRoomModel.find().lean(),
-      EmployeeModel.find().lean(),
-    ]);
+    const activeCounts = container.platformSaas.getActiveCounts(tenant.subdomain);
+    const currentStudents = Math.max(rlsData.students.length, activeCounts.students);
+    const currentGuardians = Math.max(rlsData.parents.length, activeCounts.guardians);
+    const currentTeachers = Math.max(rlsData.teachers.length, activeCounts.teachers);
+    const currentClasses = Math.max(rlsData.classRooms.length, activeCounts.classes);
+    const currentEmployees = Math.max(rlsData.employees.length, activeCounts.admins);
 
     const revenueSplit = container.platformSaas.calculateTenantRevenueSplit(
       {
@@ -328,8 +296,8 @@ export const getTenantDetails = async (req: Request, res: Response) => {
         orgStudentShareBdt: tenant.orgStudentShareBdt ?? 5,
         platformStudentShareBdt: tenant.platformStudentShareBdt ?? 10,
       },
-      students.length,
-      parents.length
+      currentStudents,
+      currentGuardians
     );
 
     res.status(200).json({
@@ -337,20 +305,14 @@ export const getTenantDetails = async (req: Request, res: Response) => {
       data: {
         tenant,
         analytics: {
-          currentStudents: students.length,
-          currentGuardians: parents.length,
-          currentTeachers: teachers.length,
-          currentClasses: classRooms.length,
-          currentEmployees: employees.length,
+          currentStudents,
+          currentGuardians,
+          currentTeachers,
+          currentClasses,
+          currentEmployees,
           revenueSplit,
         },
-        lists: {
-          students,
-          parents,
-          teachers,
-          classRooms,
-          employees,
-        },
+        lists: rlsData,
       },
     });
   } catch (error: any) {
@@ -363,7 +325,7 @@ export const getTenantDetails = async (req: Request, res: Response) => {
   }
 };
 
-// Update Tenant (Supports in-memory SaaS store + MongoDB master model, all quotas & per-student fee splits)
+// Update Tenant (PostgreSQL RLS + SaaS Store, all quotas & per-student fee splits)
 export const updateTenant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -382,65 +344,37 @@ export const updateTenant = async (req: Request, res: Response) => {
       guardianMultiStudentAllowed,
     } = req.body;
 
-    const tenant = await Tenant.findById(id).catch(() => null);
-    const saasRec = container.platformSaas.getTenant(
-      tenant ? tenant.subdomain : id
-    );
-
-    if (!tenant && !saasRec) {
+    const saasRec = container.platformSaas.getTenant(id);
+    if (!saasRec) {
       return res
         .status(404)
         .json({ success: false, message: "Tenant not found" });
     }
 
-    if (tenant) {
-      if (subscriptionStatus) tenant.subscriptionStatus = subscriptionStatus;
-      if (maxStudents !== undefined) tenant.maxStudents = Number(maxStudents);
-      if (maxGuardians !== undefined) tenant.maxGuardians = Number(maxGuardians);
-      if (maxTeachers !== undefined) tenant.maxTeachers = Number(maxTeachers);
-      if (maxClasses !== undefined) tenant.maxClasses = Number(maxClasses);
-      if (maxAdmins !== undefined) tenant.maxAdmins = Number(maxAdmins);
-      if (billingPlan) tenant.billingPlan = billingPlan;
-      if (perStudentFeeBdt !== undefined)
-        tenant.perStudentFeeBdt = Number(perStudentFeeBdt);
-      if (orgStudentShareBdt !== undefined)
-        tenant.orgStudentShareBdt = Number(orgStudentShareBdt);
-      if (platformStudentShareBdt !== undefined)
-        tenant.platformStudentShareBdt = Number(platformStudentShareBdt);
-      if (guardianPortalFree !== undefined)
-        tenant.guardianPortalFree = Boolean(guardianPortalFree);
-      if (guardianMultiStudentAllowed !== undefined)
-        tenant.guardianMultiStudentAllowed = Boolean(guardianMultiStudentAllowed);
-
-      await tenant.save();
-    }
-
-    if (saasRec) {
-      if (subscriptionStatus) saasRec.subscriptionStatus = subscriptionStatus;
-      if (maxStudents !== undefined) saasRec.maxStudents = Number(maxStudents);
-      if (maxGuardians !== undefined) saasRec.maxGuardians = Number(maxGuardians);
-      if (maxTeachers !== undefined) saasRec.maxTeachers = Number(maxTeachers);
-      if (maxClasses !== undefined) saasRec.maxClasses = Number(maxClasses);
-      if (maxAdmins !== undefined) saasRec.maxAdmins = Number(maxAdmins);
-      if (billingPlan) saasRec.billingPlan = billingPlan;
-      if (perStudentFeeBdt !== undefined)
-        saasRec.perStudentFeeBdt = Number(perStudentFeeBdt);
-      if (orgStudentShareBdt !== undefined)
-        saasRec.orgStudentShareBdt = Number(orgStudentShareBdt);
-      if (platformStudentShareBdt !== undefined)
-        saasRec.platformStudentShareBdt = Number(platformStudentShareBdt);
-      if (guardianPortalFree !== undefined)
-        saasRec.guardianPortalFree = Boolean(guardianPortalFree);
-      if (guardianMultiStudentAllowed !== undefined)
-        saasRec.guardianMultiStudentAllowed = Boolean(guardianMultiStudentAllowed);
-    }
+    if (subscriptionStatus) saasRec.subscriptionStatus = subscriptionStatus;
+    if (maxStudents !== undefined) saasRec.maxStudents = Number(maxStudents);
+    if (maxGuardians !== undefined) saasRec.maxGuardians = Number(maxGuardians);
+    if (maxTeachers !== undefined) saasRec.maxTeachers = Number(maxTeachers);
+    if (maxClasses !== undefined) saasRec.maxClasses = Number(maxClasses);
+    if (maxAdmins !== undefined) saasRec.maxAdmins = Number(maxAdmins);
+    if (billingPlan) saasRec.billingPlan = billingPlan;
+    if (perStudentFeeBdt !== undefined)
+      saasRec.perStudentFeeBdt = Number(perStudentFeeBdt);
+    if (orgStudentShareBdt !== undefined)
+      saasRec.orgStudentShareBdt = Number(orgStudentShareBdt);
+    if (platformStudentShareBdt !== undefined)
+      saasRec.platformStudentShareBdt = Number(platformStudentShareBdt);
+    if (guardianPortalFree !== undefined)
+      saasRec.guardianPortalFree = Boolean(guardianPortalFree);
+    if (guardianMultiStudentAllowed !== undefined)
+      saasRec.guardianMultiStudentAllowed = Boolean(guardianMultiStudentAllowed);
 
     await container.audit.record({
-      tenantId: String(tenant?._id || saasRec?.id || id),
+      tenantId: String(saasRec.id),
       actorUserId: req.superAdmin?.id || "superadmin",
       action: "tenant.quotas_and_pricing_updated",
       entityType: "Tenant",
-      entityId: String(tenant?._id || saasRec?.id || id),
+      entityId: String(saasRec.id),
       metadata: {
         maxStudents,
         maxGuardians,
@@ -458,7 +392,7 @@ export const updateTenant = async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       message: "Tenant quotas and per-student pricing updated successfully",
-      data: tenant || saasRec,
+      data: saasRec,
     });
   } catch {
     res
@@ -467,40 +401,10 @@ export const updateTenant = async (req: Request, res: Response) => {
   }
 };
 
-// Business Intelligence (BI) & Operations Dashboard Stats
+// Business Intelligence (BI) & Operations Dashboard Stats (PostgreSQL RLS)
 export const getDashboardStats = async (_req: Request, res: Response) => {
   try {
-    const mongoTenants = await Tenant.find().lean().catch(() => []);
-    const saasTenants = container.platformSaas.listAllTenants();
-
-    // Merge MongoDB tenants & in-memory SaaS tenants by subdomain
-    const mergedMap = new Map<string, any>();
-    for (const st of saasTenants) {
-      mergedMap.set(st.subdomain, {
-        _id: st.id,
-        name: st.name,
-        subdomain: st.subdomain,
-        institutionType: st.institutionType,
-        subscriptionStatus: st.subscriptionStatus,
-        billingPlan: st.billingPlan,
-        maxStudents: st.maxStudents,
-        maxGuardians: st.maxGuardians,
-        maxTeachers: st.maxTeachers,
-        maxClasses: st.maxClasses,
-        maxAdmins: st.maxAdmins,
-        perStudentFeeBdt: st.perStudentFeeBdt,
-        orgStudentShareBdt: st.orgStudentShareBdt,
-        platformStudentShareBdt: st.platformStudentShareBdt,
-        guardianPortalFree: st.guardianPortalFree,
-        guardianMultiStudentAllowed: st.guardianMultiStudentAllowed,
-        createdAt: st.createdAt,
-      });
-    }
-    for (const mt of mongoTenants) {
-      mergedMap.set(mt.subdomain, { ...mergedMap.get(mt.subdomain), ...mt });
-    }
-
-    const tenants = Array.from(mergedMap.values());
+    const tenants = container.platformSaas.listAllTenants();
 
     let totalStudents = 0;
     let totalGuardians = 0;
@@ -536,65 +440,29 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
     }> = [];
 
     for (const tenant of tenants) {
-      let studentCount = 0;
-      let guardianCount = 0;
-      let teacherCount = 0;
-      let classCount = 0;
-      let employeeCount = 0;
-
-      if (tenant.dbURI) {
-        try {
-          const tenantConn = TenantConnectionManager.getTenantConnection(
-            tenant.subdomain,
-            tenant.dbURI
-          );
-          const StudentModel = TenantConnectionManager.getTenantModel<any>(
-            tenantConn,
-            "Student"
-          );
-          const ParentModel = TenantConnectionManager.getTenantModel<any>(
-            tenantConn,
-            "Parent"
-          );
-          const TeacherModel = TenantConnectionManager.getTenantModel<any>(
-            tenantConn,
-            "Teacher"
-          );
-          const ClassRoomModel = TenantConnectionManager.getTenantModel<any>(
-            tenantConn,
-            "ClassRoom"
-          );
-          const EmployeeModel = TenantConnectionManager.getTenantModel<any>(
-            tenantConn,
-            "Employee"
-          );
-
-          [
-            studentCount,
-            guardianCount,
-            teacherCount,
-            classCount,
-            employeeCount,
-          ] = await Promise.all([
-            StudentModel.countDocuments(),
-            ParentModel.countDocuments(),
-            TeacherModel.countDocuments(),
-            ClassRoomModel.countDocuments(),
-            EmployeeModel.countDocuments(),
+      const rlsCounts = await RlsTenantStore.runWithTenantContext(
+        {
+          tenantId: tenant.subdomain,
+          tenantSlug: tenant.subdomain,
+        },
+        async () => {
+          const [stu, par, tch, cls, emp] = await Promise.all([
+            Student.countDocuments(),
+            Parent.countDocuments(),
+            Teacher.countDocuments(),
+            ClassRoom.countDocuments(),
+            Employee.countDocuments(),
           ]);
-        } catch {
-          // fallback to activeCounts
+          return { stu, par, tch, cls, emp };
         }
-      }
+      );
 
-      if (studentCount === 0 && teacherCount === 0) {
-        const memCounts = container.platformSaas.getActiveCounts(tenant.subdomain);
-        studentCount = memCounts.students;
-        guardianCount = memCounts.guardians;
-        teacherCount = memCounts.teachers;
-        classCount = memCounts.classes;
-        employeeCount = memCounts.admins;
-      }
+      const memCounts = container.platformSaas.getActiveCounts(tenant.subdomain);
+      const studentCount = Math.max(rlsCounts.stu, memCounts.students);
+      const guardianCount = Math.max(rlsCounts.par, memCounts.guardians);
+      const teacherCount = Math.max(rlsCounts.tch, memCounts.teachers);
+      const classCount = Math.max(rlsCounts.cls, memCounts.classes);
+      const employeeCount = Math.max(rlsCounts.emp, memCounts.admins);
 
       totalStudents += studentCount;
       totalGuardians += guardianCount;
@@ -686,34 +554,28 @@ export const getDashboardStats = async (_req: Request, res: Response) => {
 export const suspendTenant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const tenant = await Tenant.findById(id);
-    if (!tenant) {
+    const saasRec = container.platformSaas.getTenant(id);
+    if (!saasRec) {
       return res
         .status(404)
         .json({ success: false, message: "Tenant not found" });
     }
 
-    tenant.subscriptionStatus = "inactive";
-    await tenant.save();
-
-    const saasRec = container.platformSaas.getTenant(tenant.subdomain);
-    if (saasRec) {
-      saasRec.subscriptionStatus = "suspended";
-    }
+    saasRec.subscriptionStatus = "suspended";
 
     await container.audit.record({
-      tenantId: String(tenant._id),
+      tenantId: String(saasRec.id),
       actorUserId: req.superAdmin?.id || null,
       action: "tenant.suspended",
       entityType: "Tenant",
-      entityId: String(tenant._id),
-      metadata: { subdomain: tenant.subdomain },
+      entityId: String(saasRec.id),
+      metadata: { subdomain: saasRec.subdomain },
     });
 
     res.status(200).json({
       success: true,
       message: "Tenant suspended successfully",
-      data: tenant,
+      data: saasRec,
     });
   } catch {
     res
@@ -726,34 +588,28 @@ export const suspendTenant = async (req: Request, res: Response) => {
 export const activateTenant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const tenant = await Tenant.findById(id);
-    if (!tenant) {
+    const saasRec = container.platformSaas.getTenant(id);
+    if (!saasRec) {
       return res
         .status(404)
         .json({ success: false, message: "Tenant not found" });
     }
 
-    tenant.subscriptionStatus = "active";
-    await tenant.save();
-
-    const saasRec = container.platformSaas.getTenant(tenant.subdomain);
-    if (saasRec) {
-      saasRec.subscriptionStatus = "active";
-    }
+    saasRec.subscriptionStatus = "active";
 
     await container.audit.record({
-      tenantId: String(tenant._id),
+      tenantId: String(saasRec.id),
       actorUserId: req.superAdmin?.id || null,
       action: "tenant.activated",
       entityType: "Tenant",
-      entityId: String(tenant._id),
-      metadata: { subdomain: tenant.subdomain },
+      entityId: String(saasRec.id),
+      metadata: { subdomain: saasRec.subdomain },
     });
 
     res.status(200).json({
       success: true,
       message: "Tenant activated successfully",
-      data: tenant,
+      data: saasRec,
     });
   } catch {
     res
@@ -765,28 +621,13 @@ export const activateTenant = async (req: Request, res: Response) => {
 /**
  * Safe Tenant Offboarding & Verified Purge (Fixes P0-6):
  * Requires tenant to be suspended first, exports manifest, purges storage prefix
- * (`tenants/{subdomain}/`), drops/evicts the tenant DB connection, and logs audit trail.
+ * (`tenants/{subdomain}/`), purges PostgreSQL RLS rows, and logs audit trail.
  */
 export const exportTenant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    let tenant = await Tenant.findById(id).catch(() => null);
-    const key = tenant ? tenant.subdomain : id;
-
-    if (tenant && !container.platformSaas.getTenant(tenant.subdomain)) {
-      container.platformSaas.registerTenantRecord({
-        id: String(tenant._id),
-        name: tenant.name,
-        subdomain: tenant.subdomain,
-        billingPlan: tenant.billingPlan,
-      });
-      const rec = container.platformSaas.getTenant(tenant.subdomain)!;
-      rec.subscriptionStatus =
-        tenant.subscriptionStatus === "inactive" ? "suspended" : "active";
-    }
-
     const exportBundle = await container.platformSaas.exportTenantBundle(
-      key,
+      id,
       req.superAdmin?.id || "superadmin"
     );
 
@@ -807,29 +648,15 @@ export const deleteTenant = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const force = req.query.force === "true" || req.body?.force === true;
-    const tenant = await Tenant.findById(id).catch(() => null);
+    const saasTenant = container.platformSaas.getTenant(id);
 
-    if (!tenant) {
-      const saasTenant = container.platformSaas.getTenant(id);
-      if (!saasTenant) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Tenant not found" });
-      }
-      const purgeRes = await container.platformSaas.verifyAndPurgeTenant(
-        saasTenant.subdomain,
-        req.superAdmin?.id || "superadmin",
-        { forceBypassRetentionWindow: force }
-      );
-      return res.status(200).json({
-        success: true,
-        message: "Tenant verified and purged",
-        data: purgeRes,
-      });
+    if (!saasTenant) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Tenant not found" });
     }
 
-    // P0-6 Guard: Cannot delete an active tenant without suspending first
-    if (tenant.subscriptionStatus === "active") {
+    if (saasTenant.subscriptionStatus === "active") {
       return res.status(400).json({
         success: false,
         message:
@@ -837,34 +664,16 @@ export const deleteTenant = async (req: Request, res: Response) => {
       });
     }
 
-    if (!container.platformSaas.getTenant(tenant.subdomain)) {
-      container.platformSaas.registerTenantRecord({
-        id: String(tenant._id),
-        name: tenant.name,
-        subdomain: tenant.subdomain,
-        billingPlan: tenant.billingPlan,
-      });
-      const rec = container.platformSaas.getTenant(tenant.subdomain)!;
-      rec.subscriptionStatus = "suspended";
-      await container.platformSaas.exportTenantBundle(
-        tenant.subdomain,
-        req.superAdmin?.id || "superadmin"
-      );
-    }
-
-    const purgeSummary = await container.platformSaas.verifyAndPurgeTenant(
-      tenant.subdomain,
+    const purgeRes = await container.platformSaas.verifyAndPurgeTenant(
+      saasTenant.subdomain,
       req.superAdmin?.id || "superadmin",
-      { forceBypassRetentionWindow: true }
+      { forceBypassRetentionWindow: force }
     );
-
-    await TenantConnectionManager.evictAndDropTenantDatabase(tenant.subdomain);
-    await Tenant.findByIdAndDelete(id);
 
     res.status(200).json({
       success: true,
-      message: "Tenant archived, storage purged, and database removed",
-      data: purgeSummary,
+      message: "Tenant verified and purged from PostgreSQL RLS and storage",
+      data: purgeRes,
     });
   } catch (error: any) {
     res.status(400).json({
@@ -886,9 +695,7 @@ export const impersonateTenant = async (req: Request, res: Response) => {
       });
     }
 
-    const tenant: any =
-      (await Tenant.findById(id).catch(() => null)) ||
-      container.platformSaas.getTenant(id);
+    const tenant = container.platformSaas.getTenant(id);
     if (!tenant) {
       return res.status(404).json({
         success: false,
@@ -901,7 +708,7 @@ export const impersonateTenant = async (req: Request, res: Response) => {
         id: `impersonated-${tenant.subdomain}`,
         email: `impersonation@${tenant.subdomain}.campusbaba.com`,
         role: "admin",
-        referenceId: String(tenant._id || tenant.id),
+        referenceId: String(tenant.id),
         tenantId: tenant.subdomain,
         impersonatedBy: req.superAdmin?.id || "superadmin",
       },
@@ -910,12 +717,12 @@ export const impersonateTenant = async (req: Request, res: Response) => {
     );
 
     await container.audit.record({
-      tenantId: String(tenant._id || tenant.id),
+      tenantId: String(tenant.id),
       actorUserId: req.superAdmin?.id || null,
       impersonatedByAdminId: req.superAdmin?.id || null,
       action: "tenant.impersonation_started",
       entityType: "Tenant",
-      entityId: String(tenant._id || tenant.id),
+      entityId: String(tenant.id),
       ipAddress: req.ip || null,
       metadata: {
         subdomain: tenant.subdomain,
